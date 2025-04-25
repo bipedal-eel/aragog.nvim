@@ -59,7 +59,6 @@ TODO
 
 ## 🚧 Roadmap
 
-- [ ] Fuzzy finder integration (Telescope and or fzf-lua)
 - [ ] Detecting .vscode/\*.workspaces as Colony
+- [ ] Fuzzy finder integration (Telescope and or fzf-lua)
 - [ ] UI for visualizing Burrows
-

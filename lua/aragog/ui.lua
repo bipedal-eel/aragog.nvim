@@ -57,8 +57,9 @@ local function set_closers(self)
   vim.api.nvim_buf_set_keymap(self.buf, "n", "q", "", { callback = close_win, desc = "close window" })
   vim.api.nvim_buf_set_keymap(self.buf, "n", "<CR>", "", {
     callback = function()
-      -- TODO this does not work
-      self.select_line_callbak(vim.api.nvim_win_get_position(self.win)[1])
+      local line = vim.fn.getcharpos(".")[2]
+      self:close_win()
+      self.select_line_callbak(line)
     end
   })
 end

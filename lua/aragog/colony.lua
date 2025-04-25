@@ -46,8 +46,7 @@ function Colony:new(opts)
     opts = opts or {}
   }, self)
 
-  local cwd = vim.fn.getcwd()
-  local content = file_io.read_clutch(cwd)
+  local content = file_io.read_clutch()
   if not content or content == "" then
     return obj
   end
@@ -58,6 +57,7 @@ function Colony:new(opts)
   end
   obj.burrows = res
 
+  local cwd = vim.fn.getcwd()
   for _, burrow in pairs(obj.burrows) do
     if cwd == burrow.dir then
       obj.current_burrow = burrow
@@ -85,7 +85,8 @@ end
 ---@return boolean has_changed the position has chaged
 local function set_thread_position(thread)
   local charPos = vim.fn.getcharpos(".")
-  if thread.line == charPos[2] or thread.col == thread.col then
+
+  if thread.line == charPos[2] and thread.col == thread.col then
     return false
   end
 
@@ -102,7 +103,7 @@ local function hidrate_thread(self, thread)
     return
   end
   if self.opts.debug then
-    print(math.random() .. "hidrate_thread")
+    print("hidrate_thread")
   end
 
   -- TODO could put that into a list and have a loop of custom shit to set
@@ -113,6 +114,24 @@ local function hidrate_thread(self, thread)
   end
 
   Set_is_colony_stored(false)
+end
+
+function Colony:on_change_dir(new_dir)
+  if self.current_burrow and new_dir == self.current_burrow.dir then
+    print("was the same dir")
+    return
+  end
+
+  for _, burrow in pairs(self.burrows) do
+    if burrow.dir == new_dir then
+      self.current_burrow = burrow
+      print("found dir")
+      return
+    end
+  end
+
+  print("no dir found")
+  self.current_burrow = nil
 end
 
 function Colony:hidrate_current_thread()
@@ -155,6 +174,7 @@ function Colony:append_buf_to_thread()
   }
   set_thread_position(new_thread)
 
+  ---#clean code
   if self.current_burrow then
     if #self.current_burrow.threads == 1 and self.current_burrow.threads[1].path == "" then
       self.current_burrow.threads = { new_thread }
@@ -163,13 +183,19 @@ function Colony:append_buf_to_thread()
       table.insert(self.current_burrow.threads, new_thread)
     end
   else
-    print("should be in here")
-    self.burrows = {
-      {
-        dir = vim.fn.getcwd(),
-        threads = { new_thread }
-      }
+    local new_burrow = {
+      dir = vim.fn.getcwd(),
+      threads = { new_thread }
     }
+
+    if #self.burrows == 0 then
+      self.burrows = {
+        new_burrow
+      }
+    else
+      table.insert(self.burrows, new_burrow)
+    end
+
     self.current_burrow = self.burrows[#self.burrows]
   end
 end
