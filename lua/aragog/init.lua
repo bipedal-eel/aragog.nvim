@@ -12,22 +12,37 @@ local Colony = require "aragog.colony"
 ---@field opts AragogOpts
 local M = {}
 
+---TODO move to appropriate place something with persisting (merge with io)
+local function persist_colony()
+  local ok, res = pcall(file_io.write_to_clutch, vim.json.encode(M.colony.burrows))
+  if not ok then
+    vim.notify("error persisting colony" .. res, vim.log.levels.ERROR)
+    return
+  end
+  Set_is_colony_stored(true)
+end
+
 ---@param opts AragogOpts | nil
 function M.setup(opts)
   M.opts = opts or {}
 
   file_io.init()
-  M.colony = Colony:new({ debug = M.opts.debug })
+  M.colony = Colony:new({
+    debug = M.opts.debug,
+  })
   M.ui = AragogUi:new(M.goto_thread_destination)
 end
 
+---TODO what was i thinking... should this be public; not in this state, would require additional thread_builder to be public
 ---@param destThread Thread
-function M.open_file_buffer(destThread)
-  M.colony:open_file_buffer(destThread)
+function M.open_thread(destThread)
+  M.colony:open_thread(destThread)
 end
 
-function M.append_buf_to_thread()
+function M.add_file()
   M.colony:append_buf_to_thread()
+
+  persist_colony()
 end
 
 ---Open file or buffer of Thread[idx] in current Burrow
@@ -38,22 +53,20 @@ function M.goto_thread_destination(idx)
     return
   end
 
-  M.open_file_buffer(thread)
+  M.colony:open_thread(thread)
 end
 
 function M.toggle_current_threads_window()
-  if M.opts.debug then
-    print("toggle_current_threads_window")
-  end
+  vim.notify("toggle_current_threads_window", vim.log.levels.DEBUG)
   M.ui:toggle_threads_window(M.colony.current_burrow)
 end
 
--- TODO do i need to do this or is VimLeavePre enough
+-- TODO only save on VimLeavePre and hidrate on BufLeave -- gotta check if that works properly
 local groupId = vim.api.nvim_create_augroup("aragog", { clear = true })
 vim.api.nvim_create_autocmd({ "BufLeave", "VimLeavePre" }, {
   group = groupId,
-  callback = function()
-    if not M.colony.current_burrow then
+  callback = function(args)
+    if not M.colony.current_burrow or not M.colony.current_thread or M.colony.current_thread.bufnr ~= args.buf then
       return
     end
     M.colony:hidrate_current_thread()
@@ -66,13 +79,7 @@ vim.api.nvim_create_autocmd({ "BufLeave", "VimLeavePre" }, {
       print("going to save")
     end
 
-    local ok, res = pcall(file_io.write_to_clutch, vim.json.encode(M.colony.burrows))
-
-    if not ok then
-      vim.notify("error persisting colony" .. res, vim.log.levels.ERROR)
-      return
-    end
-    Set_is_colony_stored(true)
+    persist_colony()
   end,
 })
 
@@ -80,7 +87,7 @@ vim.api.nvim_create_autocmd("DirChanged", {
   group = groupId,
   callback = function(args)
     if args.match == "global" then
-      M.colony:on_change_dir(vim.fn.getcwd())
+      M.colony:on_dir_changed(args.file)
     end
   end
 })

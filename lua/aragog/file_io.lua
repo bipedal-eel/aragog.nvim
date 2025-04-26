@@ -2,9 +2,8 @@
 ---@field dir string
 local M = {}
 
-local data_path = vim.fn.stdpath("data") .. "/aragog.clutch"
-
 function M.init()
+local data_path = vim.fn.stdpath("data") .. "/aragog.clutch"
   local dir = vim.fn.finddir(data_path)
   if dir == "" then
     vim.fn.mkdir(data_path)
@@ -15,7 +14,6 @@ end
 
 ---@return string | nil
 function M.read_clutch()
-  P(M.dir)
   assert(M.dir, "[Aragog] dir should not be nil")
   local file = io.open(M.dir, "r")
   if not file then

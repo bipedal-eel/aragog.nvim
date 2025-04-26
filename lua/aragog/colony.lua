@@ -1,4 +1,5 @@
 require "aragog.globals"
+local utils = require "lua.utils"
 local file_io = require "aragog.file_io"
 
 --Maybe extract colony
@@ -29,6 +30,7 @@ local file_io = require "aragog.file_io"
 
 ---@class Burrow
 ---@field dir string | nil
+---@field prev Thread | nil
 ---@field threads Thread[]
 
 ---@class Colony
@@ -48,6 +50,7 @@ function Colony:new(opts)
 
   local content = file_io.read_clutch()
   if not content or content == "" then
+    obj.burrows = {}
     return obj
   end
 
@@ -86,7 +89,7 @@ end
 local function set_thread_position(thread)
   local charPos = vim.fn.getcharpos(".")
 
-  if thread.line == charPos[2] and thread.col == thread.col then
+  if thread.line and thread.line == charPos[2] and thread.col == thread.col then
     return false
   end
 
@@ -116,21 +119,48 @@ local function hidrate_thread(self, thread)
   Set_is_colony_stored(false)
 end
 
-function Colony:on_change_dir(new_dir)
-  if self.current_burrow and new_dir == self.current_burrow.dir then
-    print("was the same dir")
-    return
-  end
+---@param self Colony
+---@param buf integer
+---@return Thread
+local function create_thread(self, buf)
+  local thread = {
+    bufnr = buf,
+    path = vim.api.nvim_buf_get_name(buf)
+  }
 
-  for _, burrow in pairs(self.burrows) do
-    if burrow.dir == new_dir then
-      self.current_burrow = burrow
-      print("found dir")
+  hidrate_thread(self, thread)
+
+  return thread
+end
+
+function Colony:on_dir_changed(new_dir)
+  if self.current_burrow then
+    self.current_burrow.prev = self.current_thread or create_thread(self, vim.api.nvim_get_current_buf())
+    if new_dir == self.current_burrow.dir then
       return
     end
   end
 
-  print("no dir found")
+  ---@type fun(burrow: Burrow)
+  local on_found_burrow = function(burrow)
+    self.current_burrow = burrow
+    if burrow.prev then
+      local cold_dir = not burrow.prev.bufnr or not vim.api.nvim_buf_is_loaded(burrow.prev.bufnr)
+      self:open_thread(burrow.prev)
+      if cold_dir then
+        -- when "cold starting" a buffer in a changed directory, other plugins (TS, Lsp, ...) may be confused hence this:
+        vim.defer_fn(utils.fun(vim.api.nvim_cmd, { cmd = "e" }, { output = true }), 1)
+      end
+    end
+  end
+
+  for _, burrow in pairs(self.burrows) do
+    if burrow.dir == new_dir then
+      on_found_burrow(burrow)
+      return
+    end
+  end
+
   self.current_burrow = nil
 end
 
@@ -139,7 +169,7 @@ function Colony:hidrate_current_thread()
 end
 
 ---@param destThread Thread
-function Colony:open_file_buffer(destThread)
+function Colony:open_thread(destThread)
   if destThread.path == "" then
     return
   end
@@ -155,7 +185,7 @@ function Colony:open_file_buffer(destThread)
     destThread.bufnr = vim.api.nvim_get_current_buf()
     local pos = { destThread.line, destThread.col }
     if #pos == 2 then
-      vim.api.nvim_win_set_cursor(0, pos)
+      pcall(vim.api.nvim_win_set_cursor, 0, pos)
     end
 
     vim.notify("Opened file: " .. destThread.path, vim.log.levels.INFO)
@@ -173,6 +203,7 @@ function Colony:append_buf_to_thread()
     bufnr = bufnr,
   }
   set_thread_position(new_thread)
+  self.current_thread = new_thread
 
   ---#clean code
   if self.current_burrow then
