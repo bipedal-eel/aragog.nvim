@@ -29,13 +29,13 @@ local file_io = require "aragog.file_io"
 ---@field col integer | nil
 
 ---@class Burrow
----@field dir string | nil
+---@field dir string
 ---@field prev Thread | nil
----@field threads Thread[]
+---@field threads Thread[] | nil
 
 ---@class Colony
 ---@field opts ColonyOpts
----@field burrows Burrow[]
+---@field burrows Burrow[] | nil
 ---@field current_burrow Burrow | nil
 ---@field current_thread Thread | nil
 local Colony = {}
@@ -50,23 +50,24 @@ function Colony:new(opts)
 
   local content = file_io.read_clutch()
   if not content or content == "" then
-    obj.burrows = {}
     return obj
   end
 
   local ok, res = pcall(vim.json.decode, content)
-  if not ok then
-    error("[Aragog] failed to decode json: " .. res)
-  end
+  assert(ok, "[Aragog] failed to decode json: ")
   obj.burrows = res
 
   local cwd = vim.fn.getcwd()
   for _, burrow in pairs(obj.burrows) do
+    assert(burrow.dir, "[Aragog] burrow's dir must not be nil")
     if cwd == burrow.dir then
       obj.current_burrow = burrow
     end
+    if burrow.prev then
+      burrow.prev.bufnr = nil
+    end
 
-    for _, thread in pairs(burrow.threads) do
+    for _, thread in pairs(burrow and burrow.threads or {}) do
       thread.bufnr = nil
     end
   end
@@ -133,6 +134,13 @@ local function create_thread(self, buf)
   return thread
 end
 
+function Colony:on_dir_changed_pre()
+  local buf = vim.api.nvim_get_current_buf()
+  if self.current_burrow and not (self.current_thread and self.current_thread.bufnr == buf) then
+    self.current_thread = create_thread(self, buf)
+  end
+end
+
 function Colony:on_dir_changed(new_dir)
   if self.current_burrow then
     self.current_burrow.prev = self.current_thread or create_thread(self, vim.api.nvim_get_current_buf())
@@ -170,9 +178,7 @@ end
 
 ---@param destThread Thread
 function Colony:open_thread(destThread)
-  if destThread.path == "" then
-    return
-  end
+  assert(destThread.path, "[Aragog] destination thread must have a path")
 
   if destThread.bufnr and
       vim.api.nvim_buf_is_loaded(destThread.bufnr) and
@@ -207,10 +213,9 @@ function Colony:append_buf_to_thread()
 
   ---#clean code
   if self.current_burrow then
-    if #self.current_burrow.threads == 1 and self.current_burrow.threads[1].path == "" then
+    if not self.current_burrow.threads or #self.current_burrow.threads == 1 and self.current_burrow.threads[1].path == "" then
       self.current_burrow.threads = { new_thread }
     else
-      assert(self.current_burrow.threads, "[Aragog] current burrow does not have threads")
       table.insert(self.current_burrow.threads, new_thread)
     end
   else
@@ -219,7 +224,7 @@ function Colony:append_buf_to_thread()
       threads = { new_thread }
     }
 
-    if #self.burrows == 0 then
+    if not self.burrows or #self.burrows == 0 then
       self.burrows = {
         new_burrow
       }

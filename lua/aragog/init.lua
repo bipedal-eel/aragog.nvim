@@ -22,6 +22,16 @@ local function persist_colony()
   Set_is_colony_stored(true)
 end
 
+---@param type ui_type
+---@param idx integer index of destination thread in current burrow
+local function select_line_callback(type, idx)
+  if type == "threads" then
+    M.goto_thread_destination(idx)
+  else
+    M.change_burrow(idx)
+  end
+end
+
 ---@param opts AragogOpts | nil
 function M.setup(opts)
   M.opts = opts or {}
@@ -30,13 +40,13 @@ function M.setup(opts)
   M.colony = Colony:new({
     debug = M.opts.debug,
   })
-  M.ui = AragogUi:new(M.goto_thread_destination)
+  M.ui = AragogUi:new(persist_colony, select_line_callback)
 end
 
----TODO what was i thinking... should this be public; not in this state, would require additional thread_builder to be public
----@param destThread Thread
-function M.open_thread(destThread)
-  M.colony:open_thread(destThread)
+---@param destBurrow Burrow
+local function change_dir_by_burrow(destBurrow)
+  M.colony:on_dir_changed_pre()
+  vim.fn.chdir(destBurrow.dir)
 end
 
 function M.add_file()
@@ -45,11 +55,22 @@ function M.add_file()
   persist_colony()
 end
 
+---@param idx integer index of burrow to go to
+function M.change_burrow(idx)
+  local ok, burrow = pcall(function() return M.colony.burrows and M.colony.burrows[idx] end)
+  if not ok or not burrow then
+    return
+  end
+  if (M.colony.current_burrow ~= burrow) then
+    change_dir_by_burrow(burrow)
+  end
+end
+
 ---Open file or buffer of Thread[idx] in current Burrow
 ---@param idx integer index of destination thread in current burrow
 function M.goto_thread_destination(idx)
-  local thread = M.colony.current_burrow and M.colony.current_burrow.threads[idx]
-  if not thread then
+  local ok, thread = pcall(function() return M.colony.current_burrow.threads[idx] end)
+  if not ok or not thread then
     return
   end
 
@@ -57,8 +78,11 @@ function M.goto_thread_destination(idx)
 end
 
 function M.toggle_current_threads_window()
-  vim.notify("toggle_current_threads_window", vim.log.levels.DEBUG)
   M.ui:toggle_threads_window(M.colony.current_burrow)
+end
+
+function M.toggle_burrows_window()
+  M.ui:toggle_burrows_window(M.colony)
 end
 
 -- TODO only save on VimLeavePre and hidrate on BufLeave -- gotta check if that works properly
@@ -92,28 +116,24 @@ vim.api.nvim_create_autocmd("DirChanged", {
   end
 })
 
+vim.keymap.set("n", "<M-0>", function()
+  M.toggle_burrows_window()
+end)
+
 vim.keymap.set("n", "<M-1>", function()
-  if #M.colony.burrows > 0 then
-    vim.fn.chdir(M.colony.burrows[1].dir)
-  end
+  M.change_burrow(1)
 end)
 
 vim.keymap.set("n", "<M-2>", function()
-  if #M.colony.burrows > 1 then
-    vim.fn.chdir(M.colony.burrows[2].dir)
-  end
+  M.change_burrow(2)
 end)
 
 vim.keymap.set("n", "<M-3>", function()
-  if #M.colony.burrows > 2 then
-    vim.fn.chdir(M.colony.burrows[3].dir)
-  end
+  M.change_burrow(3)
 end)
 
 vim.keymap.set("n", "<M-4>", function()
-  if #M.colony.burrows > 3 then
-    vim.fn.chdir(M.colony.burrows[4].dir)
-  end
+  M.change_burrow(4)
 end)
 
 return M

@@ -1,24 +1,67 @@
 ---@class AragogUiOpts
 ---@field debug boolean | nil
 
----@alias Select_line_callbak fun(line_index: integer)
+---@alias ui_type "threads" | "burrows"
+---@alias Select_line_callback fun(type: ui_type, line_index: integer)
 
 ---@class AragogUi
+---@field type ui_type
 ---@field win integer | nil
 ---@field buf integer | nil
----@field select_line_callbak Select_line_callbak
+---@field select_line_callback Select_line_callback
+---@field persist_colony function
 ---@field opts AragogUiOpts
 local Ui = {}
 Ui.__index = Ui
 
----@param select_line_callbak Select_line_callbak
+---@param persist_colony function
+---@param select_line_callbak Select_line_callback
 ---@param opts AragogUiOpts | nil
-function Ui:new(select_line_callbak, opts)
+function Ui:new(persist_colony, select_line_callbak, opts)
   local obj = setmetatable({
-    select_line_callbak = select_line_callbak,
+    persist_colony = persist_colony,
+    select_line_callback = select_line_callbak,
     opts = opts or {},
   }, self)
   return obj
+end
+
+---@type function
+---@param burrows Burrow[]
+---@param new_dirs string[]
+---@return Burrow[]
+local function map_paths_to_burrows(burrows, new_dirs)
+  ---@type Burrow[]
+  local new_burrows = {}
+  local dirs = {}
+
+  for _, burrow in pairs(burrows) do
+    table.insert(dirs, burrow.dir)
+  end
+
+  for i, new_dir in pairs(new_dirs) do
+    if new_dir == "" then
+      goto continue
+    end
+    if new_dir:sub(-1) == "/" then
+      new_dir = new_dir:sub(0, -2)
+    end
+
+    if burrows[i] and new_dir == burrows[i].dir then
+      table.insert(new_burrows, burrows[i])
+      goto continue
+    end
+
+    local index = vim.fn.indexof(dirs, string.format("v:val == '%s'", new_dirs[i]))
+    if index ~= -1 then
+      table.insert(new_burrows, burrows[index + 1])
+    else
+      table.insert(new_burrows, { dir = new_dir })
+    end
+    ::continue::
+  end
+
+  return new_burrows
 end
 
 ---@type function
@@ -30,6 +73,10 @@ local function map_paths_to_threads(burrow, paths, new_paths)
   ---@type Thread[]
   local new_threads = {}
   for i, new_path in pairs(new_paths) do
+    if new_path == "" then
+      goto continue
+    end
+
     if new_path == paths[i] then
       table.insert(new_threads, burrow.threads[i])
       goto continue
@@ -48,7 +95,7 @@ local function map_paths_to_threads(burrow, paths, new_paths)
 end
 
 ---@param self AragogUi
-local function set_closers(self)
+local function set_local_keymaps(self)
   assert(self.win, "win must not be nil")
   assert(self.buf, "buf must not be nil")
 
@@ -59,29 +106,15 @@ local function set_closers(self)
     callback = function()
       local line = vim.fn.getcharpos(".")[2]
       self:close_win()
-      self.select_line_callbak(line)
+      self.select_line_callback(self.type, line)
     end
   })
 end
 
-function Ui:close_win()
-  vim.api.nvim_win_close(self.win, true)
-  self.buf = nil
-  self.win = nil
-end
-
----@param burrow Burrow | nil
-function Ui:toggle_threads_window(burrow)
-  if self.win then
-    self:close_win()
-
-    return
-  end
-
-  if not burrow then
-    return
-  end
-
+---@param self AragogUi
+---@param paths string[]
+---@param lines_converter fun(lines: string[])
+local function open_generic_window(self, paths, lines_converter)
   self.buf = vim.api.nvim_create_buf(false, true)
   local temp_width = math.floor(vim.o.columns * 0.6)
   local temp_height = 6
@@ -95,12 +128,7 @@ function Ui:toggle_threads_window(burrow)
     row = math.floor((vim.o.lines - temp_height) / 2),
     border = "rounded"
   })
-  set_closers(self)
-
-  local paths = {}
-  for _, thread in pairs(burrow.threads) do
-    table.insert(paths, thread.path)
-  end
+  set_local_keymaps(self)
 
   vim.api.nvim_buf_set_lines(self.buf, 0, -1, false, paths)
 
@@ -109,15 +137,79 @@ function Ui:toggle_threads_window(burrow)
     buffer = self.buf,
     group = groupId,
     callback = function()
-      local new_paths = vim.api.nvim_buf_get_lines(self.buf, 0, -1, false)
-      burrow.threads = map_paths_to_threads(burrow, paths, new_paths)
+      lines_converter(vim.api.nvim_buf_get_lines(self.buf, 0, -1, false))
       vim.api.nvim_del_augroup_by_id(groupId)
 
-      self:close_win()
-      -- TODO something like storage/data-sync whatever
-      Set_is_colony_stored(false)
+      self.buf = nil
+      self.win = nil
+      self.persist_colony()
     end,
   })
+end
+
+function Ui:close_win()
+  vim.api.nvim_win_close(self.win, true)
+  self.buf = nil
+  self.win = nil
+end
+
+---@param colony Colony | nil
+function Ui:toggle_burrows_window(colony)
+  if self.win then
+    self:close_win()
+    if self.type == "burrows" then
+      return
+    end
+  end
+
+  if not colony then
+    return
+  end
+
+  local paths = {}
+  for _, burrow in pairs(colony.burrows and colony.burrows or {}) do
+    table.insert(paths, burrow.dir)
+  end
+
+  local lines_to_burrows = function(lines)
+    if #lines == 0 then
+      return
+    end
+    colony.burrows = map_paths_to_burrows(colony.burrows or {}, lines)
+
+    if #colony.burrows == 1 then
+      colony.current_burrow = colony.burrows[1]
+    end
+  end
+
+  open_generic_window(self, paths, lines_to_burrows)
+  self.type = "burrows"
+end
+
+---@param burrow Burrow | nil
+function Ui:toggle_threads_window(burrow)
+  if self.win then
+    self:close_win()
+    if self.type == "threads" then
+      return
+    end
+  end
+
+  if not burrow then
+    return
+  end
+
+  local paths = {}
+  for _, thread in pairs(burrow.threads and burrow.threads or {}) do
+    table.insert(paths, thread.path)
+  end
+
+  local lines_to_threads = function(lines)
+    burrow.threads = map_paths_to_threads(burrow, paths, lines)
+  end
+
+  open_generic_window(self, paths, lines_to_threads)
+  self.type = "threads"
 end
 
 return Ui
