@@ -15,7 +15,6 @@ Inspired by the vast, intelligent web of Aragog and his kin, this plugin lets yo
 - Organize related workspaces into **Colonies**
 - Each **Colony** is made up of individual **Burrows** (workspaces)
 - Track and jump to important files (called **Threads**) within a **Burrow**
-- (TODO do people need to know this? also atm its json) Persist entire configurations with **Clutches** (a serialized representation of your workspace web)
 
 ---
 
@@ -59,8 +58,8 @@ TODO
 
 ## 🚧 Roadmap
 
+- [ ] Pinned Burrow
 - [ ] Detecting .vscode/\*.workspaces as Colony
 - [ ] Fuzzy finder integration (Telescope and or fzf-lua)
-- [ ] UI for visualizing Burrows
 - [ ] Nesting
 - [ ] Logging

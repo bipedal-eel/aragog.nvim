@@ -90,7 +90,7 @@ local groupId = vim.api.nvim_create_augroup("aragog", { clear = true })
 vim.api.nvim_create_autocmd({ "BufLeave", "VimLeavePre" }, {
   group = groupId,
   callback = function(args)
-    if not M.colony.current_burrow or not M.colony.current_thread or M.colony.current_thread.bufnr ~= args.buf then
+    if not M.colony.current_burrow or not M.colony.current_thread or M.colony.current_thread.buf ~= args.buf then
       return
     end
     M.colony:hidrate_current_thread()
@@ -117,6 +117,7 @@ vim.api.nvim_create_autocmd("DirChanged", {
 })
 
 vim.keymap.set("n", "<M-0>", function()
+  -- basiaclly only the "pinned" ones would be good
   M.toggle_burrows_window()
 end)
 

@@ -24,7 +24,7 @@ local file_io = require "aragog.file_io"
 --TODO could be cool to to have custom stuff in this. Would also  require custom mapping functions.
 ---@class Thread
 ---@field path string
----@field bufnr integer | nil
+---@field buf integer | nil
 ---@field line integer | nil
 ---@field col integer | nil
 
@@ -64,11 +64,11 @@ function Colony:new(opts)
       obj.current_burrow = burrow
     end
     if burrow.prev then
-      burrow.prev.bufnr = nil
+      burrow.prev.buf = nil
     end
 
     for _, thread in pairs(burrow and burrow.threads or {}) do
-      thread.bufnr = nil
+      thread.buf = nil
     end
   end
 
@@ -78,11 +78,11 @@ end
 ---@param thread Thread
 ---@return boolean
 local function buf_fits_to_path(thread)
-  if not thread.bufnr then
+  if not thread.buf then
     return false
   end
 
-  return vim.api.nvim_buf_get_name(thread.bufnr) == thread.path
+  return vim.api.nvim_buf_get_name(thread.buf) == thread.path
 end
 
 ---@param thread Thread
@@ -124,8 +124,9 @@ end
 ---@param buf integer
 ---@return Thread
 local function create_thread(self, buf)
+  ---@type Thread
   local thread = {
-    bufnr = buf,
+    buf = buf,
     path = vim.api.nvim_buf_get_name(buf)
   }
 
@@ -136,11 +137,12 @@ end
 
 function Colony:on_dir_changed_pre()
   local buf = vim.api.nvim_get_current_buf()
-  if self.current_burrow and not (self.current_thread and self.current_thread.bufnr == buf) then
+  if self.current_burrow and not (self.current_thread and self.current_thread.buf == buf) then
     self.current_thread = create_thread(self, buf)
   end
 end
 
+---@param new_dir string
 function Colony:on_dir_changed(new_dir)
   if self.current_burrow then
     self.current_burrow.prev = self.current_thread or create_thread(self, vim.api.nvim_get_current_buf())
@@ -153,11 +155,11 @@ function Colony:on_dir_changed(new_dir)
   local on_found_burrow = function(burrow)
     self.current_burrow = burrow
     if burrow.prev then
-      local cold_dir = not burrow.prev.bufnr or not vim.api.nvim_buf_is_loaded(burrow.prev.bufnr)
+      local cold_dir = not burrow.prev.buf or not vim.api.nvim_buf_is_loaded(burrow.prev.buf)
       self:open_thread(burrow.prev)
       if cold_dir then
         -- when "cold starting" a buffer in a changed directory, other plugins (TS, Lsp, ...) may be confused hence this:
-        vim.defer_fn(utils.fun(vim.api.nvim_cmd, { cmd = "e" }, { output = true }), 1)
+        vim.defer_fn(utils.fun(vim.api.nvim_cmd, { cmd = "e" }, {}), 1)
       end
     end
   end
@@ -165,6 +167,7 @@ function Colony:on_dir_changed(new_dir)
   for _, burrow in pairs(self.burrows) do
     if burrow.dir == new_dir then
       on_found_burrow(burrow)
+      vim.notify("Switched to " .. burrow.dir)
       return
     end
   end
@@ -180,15 +183,15 @@ end
 function Colony:open_thread(destThread)
   assert(destThread.path, "[Aragog] destination thread must have a path")
 
-  if destThread.bufnr and
-      vim.api.nvim_buf_is_loaded(destThread.bufnr) and
+  if destThread.buf and
+      vim.api.nvim_buf_is_loaded(destThread.buf) and
       buf_fits_to_path(destThread) then
-    vim.api.nvim_set_current_buf(destThread.bufnr)
+    vim.api.nvim_set_current_buf(destThread.buf)
     vim.notify("Switched to existing buffer: " .. destThread.path, vim.log.levels.INFO)
   else
     -- If not found, open the file (will create buffer)
     vim.cmd("edit " .. vim.fn.fnameescape(destThread.path))
-    destThread.bufnr = vim.api.nvim_get_current_buf()
+    destThread.buf = vim.api.nvim_get_current_buf()
     local pos = { destThread.line, destThread.col }
     if #pos == 2 then
       pcall(vim.api.nvim_win_set_cursor, 0, pos)
@@ -202,13 +205,9 @@ function Colony:open_thread(destThread)
 end
 
 function Colony:append_buf_to_thread()
-  local bufnr = vim.api.nvim_get_current_buf()
+  local buf = vim.api.nvim_get_current_buf()
   ---@type Thread
-  local new_thread = {
-    path = vim.api.nvim_buf_get_name(bufnr),
-    bufnr = bufnr,
-  }
-  set_thread_position(new_thread)
+  local new_thread = create_thread(self, buf)
   self.current_thread = new_thread
 
   ---#clean code
