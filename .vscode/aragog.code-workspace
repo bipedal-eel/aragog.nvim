@@ -9,8 +9,8 @@
       "path": "./../lua/aragog"
     },
     {
-      "name": "test",
       "path": "./../test"
-    }
+    },
+    {}
   ]
 }

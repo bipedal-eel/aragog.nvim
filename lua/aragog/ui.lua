@@ -117,6 +117,7 @@ end
 local function open_generic_window(self, paths, lines_converter)
   self.buf = vim.api.nvim_create_buf(false, true)
   local temp_width = math.floor(vim.o.columns * 0.6)
+  -- TODO take in count of workspace file
   local temp_height = 6
 
   self.win = vim.api.nvim_open_win(self.buf, true, {
@@ -128,6 +129,7 @@ local function open_generic_window(self, paths, lines_converter)
     row = math.floor((vim.o.lines - temp_height) / 2),
     border = "rounded"
   })
+  -- TODO optional for type workspace-file
   set_local_keymaps(self)
 
   vim.api.nvim_buf_set_lines(self.buf, 0, -1, false, paths)
@@ -154,7 +156,7 @@ function Ui:close_win()
 end
 
 ---@param colony Colony | nil
-function Ui:toggle_burrows_window(colony)
+function Ui:toggle_burrows(colony)
   if self.win then
     self:close_win()
     if self.type == "burrows" then
@@ -187,7 +189,7 @@ function Ui:toggle_burrows_window(colony)
 end
 
 ---@param burrow Burrow | nil
-function Ui:toggle_threads_window(burrow)
+function Ui:toggle_threads(burrow)
   if self.win then
     self:close_win()
     if self.type == "threads" then
@@ -210,6 +212,72 @@ function Ui:toggle_threads_window(burrow)
 
   open_generic_window(self, paths, lines_to_threads)
   self.type = "threads"
+end
+
+---@param folders vsc_folder[]
+function Ui:toggle_workspace(folders)
+  local paths_or_names = {}
+  for _, folder in pairs(folders) do
+    local _name = folder.name or folder.path
+    if not folder.path then
+      goto continue
+    end
+    table.insert(paths_or_names, _name)
+    ::continue::
+  end
+
+  local line_count = #paths_or_names
+  local width = math.floor(vim.o.columns * 0.6)
+  local height = 6 > line_count and 6 or line_count
+  local col = math.floor((vim.o.columns - width) / 2)
+  local row = math.floor((vim.o.lines - height) / 2)
+
+  self.buf = vim.api.nvim_create_buf(false, true)
+  self.win = vim.api.nvim_open_win(self.buf, true, {
+    relative = "editor",
+    style = "minimal",
+    width = width,
+    height = height,
+    col = col,
+    row = row,
+    border = "rounded"
+  })
+  set_local_keymaps(self)
+
+  vim.api.nvim_buf_set_lines(self.buf, 0, -1, false, paths_or_names)
+  vim.api.nvim_set_option_value("modifiable", false, { scope = "local", buf = self.buf })
+  vim.api.nvim_set_option_value("readonly", true, { scope = "local", buf = self.buf })
+  vim.api.nvim_set_option_value("relativenumber", true, { scope = "local", win = self.win })
+
+  -- TODO first char is space for non pinned destinations and idx for pinned ones
+  --
+  -- highligh first col
+  -- for i = 0, line_count - 1, 1 do
+  --   vim.api.nvim_buf_add_highlight(self.buf, -1, "MyHighlightGroup", i, 0, 1)
+  -- end
+  -- vim.api.nvim_command("highlight MyHighlightGroup guifg=#FF5733 guibg=transparent gui=bold")
+  -- virtual text for highlight
+  for i = 0, line_count - 1, 1 do
+    -- TODO one should be namespace something
+    vim.api.nvim_buf_set_extmark(self.buf, 1, i, 0, {
+      virt_text = { { "🚀", "Error" } }, -- Error for red, Comment for semi-transparent, Info for regular
+      virt_text_pos = "inline",
+    })
+  end
+
+  local groupId = vim.api.nvim_create_augroup("spider_ui", { clear = true })
+  vim.api.nvim_create_autocmd("WinClosed", {
+    buffer = self.buf,
+    group = groupId,
+    callback = function()
+      -- lines_converter(vim.api.nvim_buf_get_lines(self.buf, 0, -1, false))
+      vim.api.nvim_del_augroup_by_id(groupId)
+
+      self.buf = nil
+      self.win = nil
+      self.persist_colony()
+    end,
+  })
 end
 
 return Ui

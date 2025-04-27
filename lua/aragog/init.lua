@@ -3,6 +3,8 @@ local file_io = require "aragog.file_io"
 local AragogUi = require "aragog.ui"
 local Colony = require "aragog.colony"
 
+---@alias vsc_folder { name: string | nil, path: string | nil }
+
 ---@class AragogOpts
 ---@field debug boolean | nil
 
@@ -22,13 +24,26 @@ local function persist_colony()
   Set_is_colony_stored(true)
 end
 
+---@return vsc_folder[] | nil
+local function get_vsc_workspace_folders()
+  local file = io.open(".vscode/aragog.code-workspace", "r")
+  if not file then
+    return
+  end
+  local res = file:read("a")
+  local paths_or_names = {}
+  return vim.json.decode(res).folders
+end
+
 ---@param type ui_type
 ---@param idx integer index of destination thread in current burrow
 local function select_line_callback(type, idx)
   if type == "threads" then
     M.goto_thread_destination(idx)
-  else
+  elseif type == "burrows" then
     M.switch_burrow(idx)
+  else
+    print("select_line_callback")
   end
 end
 
@@ -82,11 +97,11 @@ function M.root_burrow()
 end
 
 function M.toggle_current_threads_window()
-  M.ui:toggle_threads_window(M.colony.current_burrow)
+  M.ui:toggle_threads(M.colony.current_burrow)
 end
 
 function M.toggle_burrows_window()
-  M.ui:toggle_burrows_window(M.colony)
+  M.ui:toggle_burrows(M.colony)
 end
 
 -- TODO only save on VimLeavePre and hidrate on BufLeave -- gotta check if that works properly
@@ -123,6 +138,13 @@ vim.api.nvim_create_autocmd("DirChanged", {
 vim.keymap.set("n", "<M-w>", function()
   -- basiaclly only the "pinned" ones would be good
   M.toggle_burrows_window()
+end)
+
+vim.keymap.set("n", "<M-W>", function()
+  if not M.vsc_folders then
+    M.vsc_folders = get_vsc_workspace_folders()
+  end
+  M.ui:toggle_workspace(M.vsc_folders)
 end)
 
 vim.keymap.set("n", "<M-0>", function()
