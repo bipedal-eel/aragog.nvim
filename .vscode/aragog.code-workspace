@@ -1,0 +1,16 @@
+{
+  "folders": [
+    {
+      "name": "root",
+      "path": "./.."
+    },
+    {
+      "name": "aragog",
+      "path": "./../lua/aragog"
+    },
+    {
+      "name": "test",
+      "path": "./../test"
+    }
+  ]
+}

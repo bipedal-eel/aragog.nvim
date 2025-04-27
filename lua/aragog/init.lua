@@ -28,7 +28,7 @@ local function select_line_callback(type, idx)
   if type == "threads" then
     M.goto_thread_destination(idx)
   else
-    M.change_burrow(idx)
+    M.switch_burrow(idx)
   end
 end
 
@@ -55,17 +55,6 @@ function M.add_file()
   persist_colony()
 end
 
----@param idx integer index of burrow to go to
-function M.change_burrow(idx)
-  local ok, burrow = pcall(function() return M.colony.burrows and M.colony.burrows[idx] end)
-  if not ok or not burrow then
-    return
-  end
-  if (M.colony.current_burrow ~= burrow) then
-    change_dir_by_burrow(burrow)
-  end
-end
-
 ---Open file or buffer of Thread[idx] in current Burrow
 ---@param idx integer index of destination thread in current burrow
 function M.goto_thread_destination(idx)
@@ -75,6 +64,21 @@ function M.goto_thread_destination(idx)
   end
 
   M.colony:open_thread(thread)
+end
+
+---@param idx integer index of burrow to go to
+function M.switch_burrow(idx)
+  local ok, burrow = pcall(function() return M.colony.burrows and M.colony.burrows[idx] end)
+  if not ok or not burrow then
+    return
+  end
+  if (M.colony.current_burrow ~= burrow) then
+    change_dir_by_burrow(burrow)
+  end
+end
+
+function M.root_burrow()
+  change_dir_by_burrow({ dir = file_io.root_dir })
 end
 
 function M.toggle_current_threads_window()
@@ -116,25 +120,29 @@ vim.api.nvim_create_autocmd("DirChanged", {
   end
 })
 
-vim.keymap.set("n", "<M-0>", function()
+vim.keymap.set("n", "<M-w>", function()
   -- basiaclly only the "pinned" ones would be good
   M.toggle_burrows_window()
 end)
 
+vim.keymap.set("n", "<M-0>", function()
+  M.root_burrow()
+end)
+
 vim.keymap.set("n", "<M-1>", function()
-  M.change_burrow(1)
+  M.switch_burrow(1)
 end)
 
 vim.keymap.set("n", "<M-2>", function()
-  M.change_burrow(2)
+  M.switch_burrow(2)
 end)
 
 vim.keymap.set("n", "<M-3>", function()
-  M.change_burrow(3)
+  M.switch_burrow(3)
 end)
 
 vim.keymap.set("n", "<M-4>", function()
-  M.change_burrow(4)
+  M.switch_burrow(4)
 end)
 
 return M
