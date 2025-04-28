@@ -146,7 +146,7 @@ vim.keymap.set("n", "<M-W>", function()
   if not M.vsc_folders then
     M.vsc_folders = get_vsc_workspace_folders()
   end
-  M.ui:toggle_workspace(M.vsc_folders)
+  M.ui:toggle_workspace(M.vsc_folders, "/home/bkoe/plugins/aragog.nvim/.vscode", M.colony.burrows)
 end)
 
 vim.keymap.set("n", "<M-0>", function()

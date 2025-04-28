@@ -32,7 +32,7 @@ end
 ---@param burrows Burrow[]
 ---@param new_dirs string[]
 ---@return Burrow[]
-local function map_paths_to_burrows(self, burrows, new_dirs)
+local function map_paths_to_burrows(burrows, new_dirs)
   ---@type Burrow[]
   local new_burrows = {}
   local dirs = {}
@@ -173,22 +173,19 @@ function Ui:toggle_burrows(colony)
   end
 
   local paths = {}
-  for _, burrow in pairs(colony.burrows and colony.burrows or {}) do
-    local test = string.gsub(burrow.dir,
-      vim.fn.fnamemodify(utils.root_dir_head, ":p:h"), "")
-    P(test)
-    local test2 = vim.split(burrow.dir, test)[1]
-    local dir = string.gsub(burrow.dir, test2, "")
-    P(test2)
-    P(dir)
-    table.insert(paths, dir)
+  local root = vim.fn.fnamemodify(utils.root_dir_head, ":p")
+
+  for _, burrow in pairs(colony.burrows or {}) do
+    local rel_path = burrow.dir:gsub("^" .. vim.pesc(root), "")
+    print(rel_path)
+    table.insert(paths, rel_path ~= "" and "/" .. rel_path or burrow.dir)
   end
 
   local lines_to_burrows = function(lines)
     if #lines == 0 then
       return
     end
-    colony.burrows = map_paths_to_burrows(self, colony.burrows or {}, lines)
+    colony.burrows = map_paths_to_burrows(colony.burrows or {}, lines)
 
     if #colony.burrows == 1 then
       colony.current_burrow = colony.burrows[1]
@@ -226,13 +223,17 @@ function Ui:toggle_threads(burrow)
 end
 
 ---@param folders vsc_folder[]
-function Ui:toggle_workspace(folders)
+---@param vsc_workspace_path string
+---@param burrows Burrow[]
+function Ui:toggle_workspace(folders, vsc_workspace_path, burrows)
+  local paths = {}
   local paths_or_names = {}
   for _, folder in pairs(folders) do
     local _name = folder.name or folder.path
     if not folder.path then
       goto continue
     end
+    table.insert(paths, vim.fn.fnamemodify(vsc_workspace_path .. "/" .. folder.path, ":p"))
     table.insert(paths_or_names, _name)
     ::continue::
   end
