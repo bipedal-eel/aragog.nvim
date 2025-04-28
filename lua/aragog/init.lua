@@ -1,4 +1,5 @@
 require "aragog.globals"
+local utils = require "aragog.utils"
 local file_io = require "aragog.file_io"
 local AragogUi = require "aragog.ui"
 local Colony = require "aragog.colony"
@@ -51,6 +52,7 @@ end
 function M.setup(opts)
   M.opts = opts or {}
 
+  utils.root_dir_head = vim.fn.fnamemodify(vim.fn.getcwd(), ":h")
   file_io.init()
   M.colony = Colony:new({
     debug = M.opts.debug,

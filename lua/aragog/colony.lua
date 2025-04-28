@@ -62,6 +62,7 @@ function Colony:new(opts)
     assert(burrow.dir, "[Aragog] burrow's dir must not be nil")
     if cwd == burrow.dir then
       obj.current_burrow = burrow
+      Set_current_burrow_dir(burrow.dir)
     end
     if burrow.prev then
       burrow.prev.buf = nil
@@ -107,7 +108,7 @@ local function hidrate_thread(self, thread)
     return
   end
   if self.opts.debug then
-    print("hidrate_thread")
+    vim.notify("hidrate_thread", vim.log.levels.DEBUG)
   end
 
   -- TODO could put that into a list and have a loop of custom shit to set
@@ -137,6 +138,9 @@ end
 
 function Colony:on_dir_changed_pre()
   local buf = vim.api.nvim_get_current_buf()
+  if vim.api.nvim_buf_get_name(buf) == "" then
+    return
+  end
   if self.current_burrow and not (self.current_thread and self.current_thread.buf == buf) then
     self.current_thread = create_thread(self, buf)
   end
@@ -154,6 +158,7 @@ function Colony:on_dir_changed(new_dir)
   ---@type fun(burrow: Burrow)
   local on_found_burrow = function(burrow)
     self.current_burrow = burrow
+    Set_current_burrow_dir(burrow.dir)
     if burrow.prev then
       local cold_dir = not burrow.prev.buf or not vim.api.nvim_buf_is_loaded(burrow.prev.buf)
       self:open_thread(burrow.prev)
@@ -167,13 +172,12 @@ function Colony:on_dir_changed(new_dir)
   for _, burrow in pairs(self.burrows) do
     if burrow.dir == new_dir then
       on_found_burrow(burrow)
-      vim.notify("Switched to " .. burrow.dir)
       return
     end
   end
 
-  vim.notify("Switched to " .. new_dir)
   self.current_burrow = nil
+  Set_current_burrow_dir(new_dir)
 end
 
 function Colony:hidrate_current_thread()
@@ -188,7 +192,6 @@ function Colony:open_thread(destThread)
       vim.api.nvim_buf_is_loaded(destThread.buf) and
       buf_fits_to_path(destThread) then
     vim.api.nvim_set_current_buf(destThread.buf)
-    vim.notify("Switched to existing buffer: " .. destThread.path, vim.log.levels.INFO)
   else
     -- If not found, open the file (will create buffer)
     vim.cmd("edit " .. vim.fn.fnameescape(destThread.path))
@@ -197,8 +200,6 @@ function Colony:open_thread(destThread)
     if #pos == 2 then
       pcall(vim.api.nvim_win_set_cursor, 0, pos)
     end
-
-    vim.notify("Opened file: " .. destThread.path, vim.log.levels.INFO)
   end
 
   hidrate_thread(self, destThread)

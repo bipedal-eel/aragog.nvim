@@ -1,3 +1,5 @@
+local utils = require "aragog.utils"
+
 ---@class AragogUiOpts
 ---@field debug boolean | nil
 
@@ -30,7 +32,7 @@ end
 ---@param burrows Burrow[]
 ---@param new_dirs string[]
 ---@return Burrow[]
-local function map_paths_to_burrows(burrows, new_dirs)
+local function map_paths_to_burrows(self, burrows, new_dirs)
   ---@type Burrow[]
   local new_burrows = {}
   local dirs = {}
@@ -43,6 +45,7 @@ local function map_paths_to_burrows(burrows, new_dirs)
     if new_dir == "" then
       goto continue
     end
+    new_dir = utils.root_dir_head .. new_dir
     if new_dir:sub(-1) == "/" then
       new_dir = new_dir:sub(0, -2)
     end
@@ -171,14 +174,21 @@ function Ui:toggle_burrows(colony)
 
   local paths = {}
   for _, burrow in pairs(colony.burrows and colony.burrows or {}) do
-    table.insert(paths, burrow.dir)
+    local test = string.gsub(burrow.dir,
+      vim.fn.fnamemodify(utils.root_dir_head, ":p:h"), "")
+    P(test)
+    local test2 = vim.split(burrow.dir, test)[1]
+    local dir = string.gsub(burrow.dir, test2, "")
+    P(test2)
+    P(dir)
+    table.insert(paths, dir)
   end
 
   local lines_to_burrows = function(lines)
     if #lines == 0 then
       return
     end
-    colony.burrows = map_paths_to_burrows(colony.burrows or {}, lines)
+    colony.burrows = map_paths_to_burrows(self, colony.burrows or {}, lines)
 
     if #colony.burrows == 1 then
       colony.current_burrow = colony.burrows[1]

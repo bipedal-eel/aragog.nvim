@@ -1,3 +1,5 @@
+---@class Utils
+---@field root_dir_head string
 local M = {}
 
 ---@param fn function
