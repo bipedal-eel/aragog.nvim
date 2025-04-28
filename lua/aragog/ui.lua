@@ -1,5 +1,7 @@
 local utils = require "aragog.utils"
 
+local VIRT_NS = vim.api.nvim_create_namespace("aragog_virtual_index")
+
 ---@class AragogUiOpts
 ---@field debug boolean | nil
 
@@ -159,6 +161,7 @@ function Ui:close_win()
   self.win = nil
 end
 
+---TODO restriction: "moving" not working
 ---@param colony Colony | nil
 function Ui:toggle_burrows(colony)
   if self.win then
@@ -222,19 +225,31 @@ function Ui:toggle_threads(burrow)
   self.type = "threads"
 end
 
+---TODO restrictions: "moving" does not work and duplicates are possible (old position not cleaned (not a big issue))
 ---@param folders vsc_folder[]
 ---@param vsc_workspace_path string
----@param burrows Burrow[]
+---@param burrows Burrow[] | nil
+---@return Burrow[] new_burrows
 function Ui:toggle_workspace(folders, vsc_workspace_path, burrows)
-  local paths = {}
+  local paths_obj = {}
   local paths_or_names = {}
-  for _, folder in pairs(folders) do
+  for i, folder in pairs(folders) do
     local _name = folder.name or folder.path
     if not folder.path then
       goto continue
     end
-    table.insert(paths, vim.fn.fnamemodify(vsc_workspace_path .. "/" .. folder.path, ":p"))
     table.insert(paths_or_names, _name)
+
+    local full_path = string.sub(vim.fn.fnamemodify(vsc_workspace_path .. "/" .. folder.path, ":p"), 0, -2)
+    table.insert(paths_obj, { path = full_path })
+    if not burrows then
+      goto continue
+    end
+    for j, burrow in pairs(burrows) do
+      if full_path == burrow.dir then
+        paths_obj[i].idx = j
+      end
+    end
     ::continue::
   end
 
@@ -256,26 +271,66 @@ function Ui:toggle_workspace(folders, vsc_workspace_path, burrows)
   })
   set_local_keymaps(self)
 
+  local set_virtual_indeces = function()
+    vim.api.nvim_buf_clear_namespace(self.buf, VIRT_NS, 0, -1)
+    for i = 0, line_count - 1, 1 do
+      -- TODO one should be namespace something
+      vim.api.nvim_buf_set_extmark(self.buf, VIRT_NS, i, 0, {
+        virt_text = { { string.format("%s  ", paths_obj[i + 1].idx or " "), "Error" } }, -- Error for red, Comment for semi-transparent, Info for regular
+        virt_text_pos = "inline",
+        hl_mode = "combine",
+      })
+    end
+  end
+
+  local pin_cb = function(i)
+    local idx = vim.fn.getcharpos(".")[2]
+    local path = paths_obj[idx].path
+    for _, obj in pairs(paths_obj) do
+      if obj.idx == i then
+        obj.idx = nil
+      end
+    end
+    paths_obj[idx].idx = i
+
+    if not burrows then
+      burrows = {}
+    end
+    for _, burrow in pairs(burrows) do
+      if burrow.dir == path then
+        burrows[i] = paths_obj[idx]
+      end
+    end
+    burrows[i] = { dir = path }
+    set_virtual_indeces()
+  end
+
+  vim.api.nvim_buf_set_keymap(self.buf, "n", "1", "", {
+    callback = utils.fun(pin_cb, 1),
+    desc = "pin as first burrow"
+  })
+
+  vim.api.nvim_buf_set_keymap(self.buf, "n", "2", "", {
+    callback = utils.fun(pin_cb, 2),
+    desc = "pin as second burrow"
+  })
+
+  vim.api.nvim_buf_set_keymap(self.buf, "n", "3", "", {
+    callback = utils.fun(pin_cb, 3),
+    desc = "pin as third burrow"
+  })
+
+  vim.api.nvim_buf_set_keymap(self.buf, "n", "4", "", {
+    callback = utils.fun(pin_cb, 4),
+    desc = "pin as third burrow"
+  })
+
   vim.api.nvim_buf_set_lines(self.buf, 0, -1, false, paths_or_names)
   vim.api.nvim_set_option_value("modifiable", false, { scope = "local", buf = self.buf })
   vim.api.nvim_set_option_value("readonly", true, { scope = "local", buf = self.buf })
   vim.api.nvim_set_option_value("relativenumber", true, { scope = "local", win = self.win })
 
-  -- TODO first char is space for non pinned destinations and idx for pinned ones
-  --
-  -- highligh first col
-  -- for i = 0, line_count - 1, 1 do
-  --   vim.api.nvim_buf_add_highlight(self.buf, -1, "MyHighlightGroup", i, 0, 1)
-  -- end
-  -- vim.api.nvim_command("highlight MyHighlightGroup guifg=#FF5733 guibg=transparent gui=bold")
-  -- virtual text for highlight
-  for i = 0, line_count - 1, 1 do
-    -- TODO one should be namespace something
-    vim.api.nvim_buf_set_extmark(self.buf, 1, i, 0, {
-      virt_text = { { "🚀", "Error" } }, -- Error for red, Comment for semi-transparent, Info for regular
-      virt_text_pos = "inline",
-    })
-  end
+  set_virtual_indeces()
 
   local groupId = vim.api.nvim_create_augroup("spider_ui", { clear = true })
   vim.api.nvim_create_autocmd("WinClosed", {
@@ -290,6 +345,8 @@ function Ui:toggle_workspace(folders, vsc_workspace_path, burrows)
       self.persist_colony()
     end,
   })
+
+  return burrows
 end
 
 return Ui

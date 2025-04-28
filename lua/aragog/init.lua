@@ -27,7 +27,12 @@ end
 
 ---@return vsc_folder[] | nil
 local function get_vsc_workspace_folders()
-  local file = io.open(".vscode/aragog.code-workspace", "r")
+  local matches = vim.fn.glob(".vscode/*.code-workspace", true, true)
+  if #matches == 0 then
+    return
+  end
+
+  local file = io.open(matches[1], "r")
   if not file then
     return
   end
@@ -146,7 +151,7 @@ vim.keymap.set("n", "<M-W>", function()
   if not M.vsc_folders then
     M.vsc_folders = get_vsc_workspace_folders()
   end
-  M.ui:toggle_workspace(M.vsc_folders, "/home/bkoe/plugins/aragog.nvim/.vscode", M.colony.burrows)
+  M.colony.burrows = M.ui:toggle_workspace(M.vsc_folders, "./.vscode", M.colony.burrows)
 end)
 
 vim.keymap.set("n", "<M-0>", function()
