@@ -1,5 +1,5 @@
 require "aragog.globals"
-local utils = require "lua.utils"
+local utils = require "aragog.utils"
 local file_io = require "aragog.file_io"
 
 --Maybe extract colony
@@ -172,6 +172,7 @@ function Colony:on_dir_changed(new_dir)
     end
   end
 
+  vim.notify("Switched to " .. new_dir)
   self.current_burrow = nil
 end
 

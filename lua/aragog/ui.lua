@@ -66,27 +66,28 @@ end
 
 ---@type function
 ---@param burrow Burrow
----@param paths string[]
----@param new_paths string[]
+---@param rel_paths string[]
+---@param rel_new_paths string[]
 ---@return Thread[]
-local function map_paths_to_threads(burrow, paths, new_paths)
+local function map_paths_to_threads(burrow, rel_paths, rel_new_paths)
   ---@type Thread[]
   local new_threads = {}
-  for i, new_path in pairs(new_paths) do
+  local cwd = vim.fn.getcwd()
+  for i, new_path in pairs(rel_new_paths) do
     if new_path == "" then
       goto continue
     end
 
-    if new_path == paths[i] then
+    if new_path == rel_paths[i] then
       table.insert(new_threads, burrow.threads[i])
       goto continue
     end
 
-    local index = vim.fn.indexof(paths, string.format("v:val == '%s'", new_paths[i]))
+    local index = vim.fn.indexof(rel_paths, string.format("v:val == '%s'", rel_new_paths[i]))
     if index ~= -1 then
       table.insert(new_threads, burrow.threads[index + 1])
     else
-      table.insert(new_threads, { path = new_path })
+      table.insert(new_threads, { path = cwd .. "/" .. new_path })
     end
     ::continue::
   end
@@ -203,7 +204,7 @@ function Ui:toggle_threads(burrow)
 
   local paths = {}
   for _, thread in pairs(burrow.threads and burrow.threads or {}) do
-    table.insert(paths, thread.path)
+    table.insert(paths, vim.fn.fnamemodify(thread.path, ":."))
   end
 
   local lines_to_threads = function(lines)
