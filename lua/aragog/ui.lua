@@ -57,7 +57,7 @@ local function map_paths_to_burrows(burrows, new_dirs)
       goto continue
     end
 
-    local index = vim.fn.indexof(dirs, string.format("v:val == '%s'", new_dirs[i]))
+    local index = vim.fn.indexof(dirs, string.format("v:val == %q", new_dirs[i]))
     if index ~= -1 then
       table.insert(new_burrows, burrows[index + 1])
     else
@@ -88,7 +88,7 @@ local function map_paths_to_threads(burrow, rel_paths, rel_new_paths)
       goto continue
     end
 
-    local index = vim.fn.indexof(rel_paths, string.format("v:val == '%s'", rel_new_paths[i]))
+    local index = vim.fn.indexof(rel_paths, string.format("v:val == %q", rel_new_paths[i]))
     if index ~= -1 then
       table.insert(new_threads, burrow.threads[index + 1])
     else
@@ -231,27 +231,32 @@ end
 ---@param burrows Burrow[] | nil
 ---@return Burrow[] new_burrows
 function Ui:toggle_workspace(folders, vsc_workspace_path, burrows)
+  --TODO put this somewhere else, names could be used right after init
+  --#region ws init
   local paths_obj = {}
   local paths_or_names = {}
   for i, folder in pairs(folders) do
     local _name = folder.name or folder.path
-    if not folder.path then
-      goto continue
-    end
+    assert(folder.path, "folder must have a path")
     table.insert(paths_or_names, _name)
 
-    local full_path = string.sub(vim.fn.fnamemodify(vsc_workspace_path .. "/" .. folder.path, ":p"), 0, -2)
+    local full_path = string.gsub(vim.fn.fnamemodify(vsc_workspace_path .. "/" .. folder.path, ":p"), "%/$", "")
     table.insert(paths_obj, { path = full_path })
+
+    --#region ws refresh/update
     if not burrows then
       goto continue
     end
     for j, burrow in pairs(burrows) do
-      if full_path == burrow.dir then
+      if full_path == burrow.dir and paths_obj[i] then
+        burrow.name = folder.name
         paths_obj[i].idx = j
       end
     end
+    --#endregion
     ::continue::
   end
+  --#endregion
 
   local line_count = #paths_or_names
   local width = math.floor(vim.o.columns * 0.6)
@@ -274,7 +279,6 @@ function Ui:toggle_workspace(folders, vsc_workspace_path, burrows)
   local set_virtual_indeces = function()
     vim.api.nvim_buf_clear_namespace(self.buf, VIRT_NS, 0, -1)
     for i = 0, line_count - 1, 1 do
-      -- TODO one should be namespace something
       vim.api.nvim_buf_set_extmark(self.buf, VIRT_NS, i, 0, {
         virt_text = { { string.format("%s  ", paths_obj[i + 1].idx or " "), "Error" } }, -- Error for red, Comment for semi-transparent, Info for regular
         virt_text_pos = "inline",

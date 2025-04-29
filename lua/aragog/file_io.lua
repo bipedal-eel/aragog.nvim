@@ -1,7 +1,26 @@
+---@alias vsc_folder { name: string | nil, path: string }
+
 ---@class file_io
 ---@field root_dir string
 ---@field store_dir string
+---@field vsc_folders vsc_folder[] | nil
 local M = {}
+
+---@return vsc_folder[] | nil
+local function vsc_workspace_folder()
+  local matches = vim.fn.glob(M.root_dir .. "/.vscode/*.code-workspace", true, true)
+  if #matches == 0 then
+    return
+  end
+
+  local file = io.open(matches[1], "r")
+  if not file then
+    return
+  end
+  local res = file:read("a")
+
+  return vim.json.decode(res).folders
+end
 
 function M.init()
   local data_path = vim.fn.stdpath("data") .. "/aragog.clutch"
@@ -12,6 +31,7 @@ function M.init()
 
   M.root_dir = vim.fn.getcwd()
   M.store_dir = data_path .. "/" .. vim.fn.substitute(M.root_dir, "/", "_", "g")
+  M.vsc_folders = vsc_workspace_folder()
 end
 
 ---@return string | nil

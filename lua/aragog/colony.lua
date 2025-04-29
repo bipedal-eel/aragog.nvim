@@ -30,6 +30,7 @@ local file_io = require "aragog.file_io"
 
 ---@class Burrow
 ---@field dir string
+---@field name string | nil
 ---@field prev Thread | nil
 ---@field threads Thread[] | nil
 
@@ -62,7 +63,7 @@ function Colony:new(opts)
     assert(burrow.dir, "[Aragog] burrow's dir must not be nil")
     if cwd == burrow.dir then
       obj.current_burrow = burrow
-      Set_current_burrow_dir(burrow.dir)
+      Set_current_burrow_dir(burrow.dir, obj.current_burrow.name)
     end
     if burrow.prev then
       burrow.prev.buf = nil
@@ -101,14 +102,10 @@ local function set_thread_position(thread)
 end
 
 ---Sets vim.g._aragog_colony_stored to false when position has changed
----@param self Colony
 ---@param thread Thread | nil
-local function hidrate_thread(self, thread)
+local function hidrate_thread(thread)
   if not thread then
     return
-  end
-  if self.opts.debug then
-    vim.notify("hidrate_thread", vim.log.levels.DEBUG)
   end
 
   -- TODO could put that into a list and have a loop of custom shit to set
@@ -121,17 +118,16 @@ local function hidrate_thread(self, thread)
   Set_is_colony_stored(false)
 end
 
----@param self Colony
 ---@param buf integer
 ---@return Thread
-local function create_thread(self, buf)
+local function create_thread(buf)
   ---@type Thread
   local thread = {
     buf = buf,
     path = vim.api.nvim_buf_get_name(buf)
   }
 
-  hidrate_thread(self, thread)
+  hidrate_thread(thread)
 
   return thread
 end
@@ -142,14 +138,14 @@ function Colony:on_dir_changed_pre()
     return
   end
   if self.current_burrow and not (self.current_thread and self.current_thread.buf == buf) then
-    self.current_thread = create_thread(self, buf)
+    self.current_thread = create_thread(buf)
   end
 end
 
 ---@param new_dir string
 function Colony:on_dir_changed(new_dir)
   if self.current_burrow then
-    self.current_burrow.prev = self.current_thread or create_thread(self, vim.api.nvim_get_current_buf())
+    self.current_burrow.prev = self.current_thread or create_thread(vim.api.nvim_get_current_buf())
     if new_dir == self.current_burrow.dir then
       return
     end
@@ -158,7 +154,7 @@ function Colony:on_dir_changed(new_dir)
   ---@type fun(burrow: Burrow)
   local on_found_burrow = function(burrow)
     self.current_burrow = burrow
-    Set_current_burrow_dir(burrow.dir)
+    Set_current_burrow_dir(burrow.dir, burrow.name)
     if burrow.prev then
       local cold_dir = not burrow.prev.buf or not vim.api.nvim_buf_is_loaded(burrow.prev.buf)
       self:open_thread(burrow.prev)
@@ -181,7 +177,7 @@ function Colony:on_dir_changed(new_dir)
 end
 
 function Colony:hidrate_current_thread()
-  hidrate_thread(self, self.current_thread)
+  hidrate_thread(self.current_thread)
 end
 
 ---@param destThread Thread
@@ -202,14 +198,14 @@ function Colony:open_thread(destThread)
     end
   end
 
-  hidrate_thread(self, destThread)
+  hidrate_thread(destThread)
   self.current_thread = destThread
 end
 
 function Colony:append_buf_to_thread()
   local buf = vim.api.nvim_get_current_buf()
   ---@type Thread
-  local new_thread = create_thread(self, buf)
+  local new_thread = create_thread(buf)
   self.current_thread = new_thread
 
   ---#clean code

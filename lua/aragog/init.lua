@@ -4,8 +4,6 @@ local file_io = require "aragog.file_io"
 local AragogUi = require "aragog.ui"
 local Colony = require "aragog.colony"
 
----@alias vsc_folder { name: string | nil, path: string | nil }
-
 ---@class AragogOpts
 ---@field debug boolean | nil
 
@@ -23,22 +21,6 @@ local function persist_colony()
     return
   end
   Set_is_colony_stored(true)
-end
-
----@return vsc_folder[] | nil
-local function get_vsc_workspace_folders()
-  local matches = vim.fn.glob(".vscode/*.code-workspace", true, true)
-  if #matches == 0 then
-    return
-  end
-
-  local file = io.open(matches[1], "r")
-  if not file then
-    return
-  end
-  local res = file:read("a")
-  local paths_or_names = {}
-  return vim.json.decode(res).folders
 end
 
 ---@param type ui_type
@@ -143,15 +125,14 @@ vim.api.nvim_create_autocmd("DirChanged", {
 })
 
 vim.keymap.set("n", "<M-w>", function()
-  -- basiaclly only the "pinned" ones would be good
   M.toggle_burrows_window()
 end)
 
 vim.keymap.set("n", "<M-W>", function()
-  if not M.vsc_folders then
-    M.vsc_folders = get_vsc_workspace_folders()
+  if not file_io.vsc_folders then
+    return
   end
-  M.colony.burrows = M.ui:toggle_workspace(M.vsc_folders, "./.vscode", M.colony.burrows)
+  M.colony.burrows = M.ui:toggle_workspace(file_io.vsc_folders, "./.vscode", M.colony.burrows)
 end)
 
 vim.keymap.set("n", "<M-0>", function()

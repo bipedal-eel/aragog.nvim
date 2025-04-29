@@ -11,6 +11,9 @@
     {
       "path": "./../test"
     },
-    {}
+    {
+      "name": "dashes",
+      "path": "./../lua/dir-with-dashes"
+    }
   ]
 }

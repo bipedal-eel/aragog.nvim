@@ -60,7 +60,7 @@ TODO
 
 - [x] Detecting .vscode/\*.workspaces as Colony
 - [ ] proper moving of burrows in both burrow and workspace ui
-- [ ] Pinned Burrow
+- [ ] --Pinned Burrow-- dont think i really want this?
 - [ ] Fuzzy finder integration (Telescope and or fzf-lua)
-- [ ] Nesting
+- [ ] Nesting?
 - [ ] Logging
