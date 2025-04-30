@@ -9,6 +9,7 @@
       "path": "./../lua/aragog"
     },
     {
+      "name": "aragog/test",
       "path": "./../test"
     },
     {
@@ -16,4 +17,7 @@
       "path": "./../lua/dir-with-dashes"
     }
   ]
+    {}
+  ],
+  "settings": {}
 }
