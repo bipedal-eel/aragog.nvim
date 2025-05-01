@@ -1,6 +1,5 @@
-local parse_workspace = require "lua.aragog.parse_workspace"
+local parse_workspace = require "aragog.parse_workspace"
 
--- Example usage:
 local input = [[
 {
   "folders": [
@@ -18,7 +17,10 @@ local input = [[
       "name": "aragog/test",
       "path": "./../test/"
     },
-    { hella invalid json }
+    { hella invalid json },
+    {
+      "name": "ignores fields without names"
+    }
     {
       "name": "dashes",
       "path": "./../lua/dir-with-dashes"

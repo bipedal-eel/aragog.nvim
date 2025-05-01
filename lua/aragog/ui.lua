@@ -30,6 +30,26 @@ function Ui:new(persist_colony, select_line_callback, opts)
   return obj
 end
 
+---@class workspace_with_idx: workspace
+---@field idx integer
+
+---@type workspace_with_idx[]
+Ui.workspace_paths_obj = {}
+---@type string[]
+Ui.workspace_paths_or_names = {}
+
+---@param folders workspace[]
+---@param workspace_dir string
+function Ui:init_workspace_paths(folders, workspace_dir)
+  for _, folder in pairs(folders) do
+    local _name = folder.name or folder.path
+    table.insert(Ui.workspace_paths_or_names, _name)
+
+    local full_path = string.gsub(vim.fn.fnamemodify(workspace_dir .. "/" .. folder.path, ":p"), "%/$", "")
+    table.insert(Ui.workspace_paths_obj, { path = full_path })
+  end
+end
+
 ---@type function
 ---@param burrows Burrow[]
 ---@param new_dirs string[]
@@ -226,38 +246,23 @@ end
 
 ---TODO restrictions: "moving" does not work and duplicates are possible (old position not cleaned (not a big issue))
 ---@param folders workspace[]
----@param vs_workspace_path string
 ---@param burrows Burrow[] | nil
 ---@return Burrow[] new_burrows
-function Ui:toggle_workspace(folders, vs_workspace_path, burrows)
-  --TODO put this somewhere else, names could be used right after init
-  --#region ws init
-  local paths_obj = {}
-  local paths_or_names = {}
+function Ui:toggle_workspace(folders, burrows)
   for i, folder in pairs(folders) do
-    local _name = folder.name or folder.path
-    assert(folder.path, "folder must have a path")
-    table.insert(paths_or_names, _name)
-
-    local full_path = string.gsub(vim.fn.fnamemodify(vs_workspace_path .. "/" .. folder.path, ":p"), "%/$", "")
-    table.insert(paths_obj, { path = full_path })
-
-    --#region ws refresh/update
     if not burrows then
       goto continue
     end
     for j, burrow in pairs(burrows) do
-      if full_path == burrow.dir and paths_obj[i] then
+      if Ui.workspace_paths_obj[i] and Ui.workspace_paths_obj[i].path == burrow.dir then
         burrow.name = folder.name
-        paths_obj[i].idx = j
+        Ui.workspace_paths_obj[i].idx = j
       end
     end
-    --#endregion
     ::continue::
   end
-  --#endregion
 
-  local line_count = #paths_or_names
+  local line_count = #Ui.workspace_paths_or_names
   local width = math.floor(vim.o.columns * 0.6)
   local height = 6 > line_count and 6 or line_count
   local col = math.floor((vim.o.columns - width) / 2)
@@ -279,7 +284,7 @@ function Ui:toggle_workspace(folders, vs_workspace_path, burrows)
     vim.api.nvim_buf_clear_namespace(self.buf, VIRT_NS, 0, -1)
     for i = 0, line_count - 1, 1 do
       vim.api.nvim_buf_set_extmark(self.buf, VIRT_NS, i, 0, {
-        virt_text = { { string.format("%s  ", paths_obj[i + 1].idx or " "), "Error" } }, -- Error for red, Comment for semi-transparent, Info for regular
+        virt_text = { { string.format("%s  ", Ui.workspace_paths_obj[i + 1].idx or " "), "Error" } }, -- Error for red, Comment for semi-transparent, Info for regular
         virt_text_pos = "inline",
         hl_mode = "combine",
       })
@@ -288,20 +293,20 @@ function Ui:toggle_workspace(folders, vs_workspace_path, burrows)
 
   local pin_cb = function(i)
     local idx = vim.fn.getcharpos(".")[2]
-    local path = paths_obj[idx].path
-    for _, obj in pairs(paths_obj) do
+    local path = Ui.workspace_paths_obj[idx].path
+    for _, obj in pairs(Ui.workspace_paths_obj) do
       if obj.idx == i then
         obj.idx = nil
       end
     end
-    paths_obj[idx].idx = i
+    Ui.workspace_paths_obj[idx].idx = i
 
     if not burrows then
       burrows = {}
     end
     for _, burrow in pairs(burrows) do
       if burrow.dir == path then
-        burrows[i] = paths_obj[idx]
+        burrows[i] = Ui.workspace_paths_obj[idx]
       end
     end
     burrows[i] = { dir = path }
@@ -328,7 +333,7 @@ function Ui:toggle_workspace(folders, vs_workspace_path, burrows)
     desc = "pin as third burrow"
   })
 
-  vim.api.nvim_buf_set_lines(self.buf, 0, -1, false, paths_or_names)
+  vim.api.nvim_buf_set_lines(self.buf, 0, -1, false, Ui.workspace_paths_or_names)
   vim.api.nvim_set_option_value("modifiable", false, { scope = "local", buf = self.buf })
   vim.api.nvim_set_option_value("readonly", true, { scope = "local", buf = self.buf })
   vim.api.nvim_set_option_value("relativenumber", true, { scope = "local", win = self.win })

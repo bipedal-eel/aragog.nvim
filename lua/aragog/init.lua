@@ -45,6 +45,7 @@ function M.setup(opts)
     debug = M.opts.debug,
   })
   M.ui = AragogUi:new(persist_colony, select_line_callback)
+  AragogUi:init_workspace_paths(file_io.workspaces, "./.vscode")
 end
 
 ---@param destBurrow Burrow
@@ -97,7 +98,7 @@ function M.toggle_workspace_window()
   if not file_io.workspaces then
     return
   end
-  M.colony.burrows = M.ui:toggle_workspace(file_io.workspaces, "./.vscode", M.colony.burrows)
+  M.colony.burrows = M.ui:toggle_workspace(file_io.workspaces, M.colony.burrows)
 end
 
 -- TODO only save on VimLeavePre and hidrate on BufLeave -- gotta check if that works properly

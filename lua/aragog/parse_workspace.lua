@@ -1,4 +1,6 @@
----@alias workspace { name: string | nil, path: string }
+---@class workspace
+---@field name string | nil
+---@field path string
 
 local M = {}
 
@@ -41,14 +43,14 @@ function M.vsc_folders(input)
       current = {}
       goto continue
     elseif line == "}," or line == "}" then
-      if current then
+      -- ignore folders without a path
+      if current and current.path then
         table.insert(folders, current)
         current = nil
       end
       goto continue
     end
 
-    -- Parse lines like: "name": "root",
     local key, value = line:match('"([^"]+)"%s*:%s*"([^"]+)"')
     if key and value and current then
       current[key] = value
