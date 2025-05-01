@@ -19,12 +19,12 @@ local Ui = {}
 Ui.__index = Ui
 
 ---@param persist_colony function
----@param select_line_callbak Select_line_callback
+---@param select_line_callback Select_line_callback
 ---@param opts AragogUiOpts | nil
-function Ui:new(persist_colony, select_line_callbak, opts)
+function Ui:new(persist_colony, select_line_callback, opts)
   local obj = setmetatable({
     persist_colony = persist_colony,
-    select_line_callback = select_line_callbak,
+    select_line_callback = select_line_callback,
     opts = opts or {},
   }, self)
   return obj
@@ -226,11 +226,11 @@ function Ui:toggle_threads(burrow)
 end
 
 ---TODO restrictions: "moving" does not work and duplicates are possible (old position not cleaned (not a big issue))
----@param folders vsc_folder[]
----@param vsc_workspace_path string
+---@param folders workspace[]
+---@param vs_workspace_path string
 ---@param burrows Burrow[] | nil
 ---@return Burrow[] new_burrows
-function Ui:toggle_workspace(folders, vsc_workspace_path, burrows)
+function Ui:toggle_workspace(folders, vs_workspace_path, burrows)
   --TODO put this somewhere else, names could be used right after init
   --#region ws init
   local paths_obj = {}
@@ -240,7 +240,7 @@ function Ui:toggle_workspace(folders, vsc_workspace_path, burrows)
     assert(folder.path, "folder must have a path")
     table.insert(paths_or_names, _name)
 
-    local full_path = string.gsub(vim.fn.fnamemodify(vsc_workspace_path .. "/" .. folder.path, ":p"), "%/$", "")
+    local full_path = string.gsub(vim.fn.fnamemodify(vs_workspace_path .. "/" .. folder.path, ":p"), "%/$", "")
     table.insert(paths_obj, { path = full_path })
 
     --#region ws refresh/update

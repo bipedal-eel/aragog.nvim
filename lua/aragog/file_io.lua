@@ -1,13 +1,13 @@
----@alias vsc_folder { name: string | nil, path: string }
+local parse_workspace = require "aragog.parse_workspace"
 
 ---@class file_io
 ---@field root_dir string
 ---@field store_dir string
----@field vsc_folders vsc_folder[] | nil
+---@field workspaces workspace[] | nil
 local M = {}
 
----@return vsc_folder[] | nil
-local function vsc_workspace_folder()
+---@return workspace[] | nil
+local function workspaces()
   local matches = vim.fn.glob(M.root_dir .. "/.vscode/*.code-workspace", true, true)
   if #matches == 0 then
     return
@@ -17,9 +17,9 @@ local function vsc_workspace_folder()
   if not file then
     return
   end
-  local res = file:read("a")
+  local content = file:read("a")
 
-  return vim.json.decode(res).folders
+  return parse_workspace.vsc_folders(content)
 end
 
 function M.init()
@@ -31,7 +31,7 @@ function M.init()
 
   M.root_dir = vim.fn.getcwd()
   M.store_dir = data_path .. "/" .. vim.fn.substitute(M.root_dir, "/", "_", "g")
-  M.vsc_folders = vsc_workspace_folder()
+  M.workspaces = workspaces()
 end
 
 ---@return string | nil

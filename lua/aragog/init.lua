@@ -129,10 +129,10 @@ vim.keymap.set("n", "<M-w>", function()
 end)
 
 vim.keymap.set("n", "<M-W>", function()
-  if not file_io.vsc_folders then
+  if not file_io.workspaces then
     return
   end
-  M.colony.burrows = M.ui:toggle_workspace(file_io.vsc_folders, "./.vscode", M.colony.burrows)
+  M.colony.burrows = M.ui:toggle_workspace(file_io.workspaces, "./.vscode", M.colony.burrows)
 end)
 
 vim.keymap.set("n", "<M-0>", function()

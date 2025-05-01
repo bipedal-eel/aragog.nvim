@@ -1,23 +1,22 @@
 {
   "folders": [
+    // here is a comment
     {
       "name": "root",
-      "path": "./.."
+      "path": "./..",
     },
     {
       "name": "aragog",
-      "path": "./../lua/aragog"
+      "path": "./../lua/aragog",
     },
+    // here  is another comment
     {
-      "name": "aragog/test",
       "path": "./../test"
     },
     {
       "name": "dashes",
       "path": "./../lua/dir-with-dashes"
     }
-  ]
-    {}
   ],
   "settings": {}
 }
