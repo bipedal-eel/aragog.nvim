@@ -93,6 +93,13 @@ function M.toggle_burrows_window()
   M.ui:toggle_burrows(M.colony)
 end
 
+function M.toggle_workspace_window()
+  if not file_io.workspaces then
+    return
+  end
+  M.colony.burrows = M.ui:toggle_workspace(file_io.workspaces, "./.vscode", M.colony.burrows)
+end
+
 -- TODO only save on VimLeavePre and hidrate on BufLeave -- gotta check if that works properly
 local groupId = vim.api.nvim_create_augroup("aragog", { clear = true })
 vim.api.nvim_create_autocmd({ "BufLeave", "VimLeavePre" }, {
@@ -123,36 +130,5 @@ vim.api.nvim_create_autocmd("DirChanged", {
     end
   end
 })
-
-vim.keymap.set("n", "<M-w>", function()
-  M.toggle_burrows_window()
-end)
-
-vim.keymap.set("n", "<M-W>", function()
-  if not file_io.workspaces then
-    return
-  end
-  M.colony.burrows = M.ui:toggle_workspace(file_io.workspaces, "./.vscode", M.colony.burrows)
-end)
-
-vim.keymap.set("n", "<M-0>", function()
-  M.root_burrow()
-end)
-
-vim.keymap.set("n", "<M-1>", function()
-  M.switch_burrow(1)
-end)
-
-vim.keymap.set("n", "<M-2>", function()
-  M.switch_burrow(2)
-end)
-
-vim.keymap.set("n", "<M-3>", function()
-  M.switch_burrow(3)
-end)
-
-vim.keymap.set("n", "<M-4>", function()
-  M.switch_burrow(4)
-end)
 
 return M

@@ -180,7 +180,6 @@ function Ui:toggle_burrows(colony)
 
   for _, burrow in pairs(colony.burrows or {}) do
     local rel_path = burrow.dir:gsub("^" .. vim.pesc(root), "")
-    print(rel_path)
     table.insert(paths, rel_path ~= "" and "/" .. rel_path or burrow.dir)
   end
 

@@ -15,7 +15,6 @@ function M.vsc_folders(input)
   local count = 1
 
   for i = count, #lines, 1 do
-    print("searching folders: " .. count)
     local line = lines[i]:match("^%s*(.-)%s*$") -- trim
     count = count + 1
 
