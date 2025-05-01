@@ -1,4 +1,4 @@
-local parse_workspace = require "aragog.parse_workspace"
+local file_io = require "aragog.file_io"
 
 local input = [[
 {
@@ -53,7 +53,7 @@ local expected = {
 
 describe("parse vsw", function()
   it("can be parsed", function()
-    local folders = parse_workspace.vsc_folders(input)
+    local folders = file_io.parse_vsw_folders(input)
     assert.are.same(expected, folders)
   end)
 end)

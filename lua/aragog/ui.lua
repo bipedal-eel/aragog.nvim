@@ -30,10 +30,7 @@ function Ui:new(persist_colony, select_line_callback, opts)
   return obj
 end
 
----@class workspace_with_idx: workspace
----@field idx integer
-
----@type workspace_with_idx[]
+---@type workspace[]
 Ui.workspace_paths_obj = {}
 ---@type string[]
 Ui.workspace_paths_or_names = {}
