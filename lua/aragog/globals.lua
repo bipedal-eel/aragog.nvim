@@ -15,6 +15,6 @@ end
 ---@param name string | nil name of the workspace // TODO this will only make sense when vs_workspaces have been implementet
 Set_current_burrow_dir = function(dir, name)
   local current_burrow = name or
-  string.gsub(vim.fn.fnameescape(vim.fn.fnamemodify(dir, ":p:h")), utils.root_dir_head, "")
+      string.gsub(vim.fn.fnameescape(vim.fn.fnamemodify(dir, ":p:h")), utils.root_dir_head, "")
   vim.g.aragog_current_burrow = current_burrow
 end

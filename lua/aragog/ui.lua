@@ -20,8 +20,8 @@ local VIRT_NS = vim.api.nvim_create_namespace("aragog_virtual_index")
 local Ui = {}
 Ui.__index = Ui
 
----@param folders workspace[]
----@param workspace_dir string
+---@param folders workspace[] | nil
+---@param workspace_dir string | nil
 ---@param select_line_callback select_line_callback
 ---@param opts AragogUiOpts | nil
 function Ui:new(folders, workspace_dir, persist_colony, select_line_callback, opts)
@@ -33,12 +33,14 @@ function Ui:new(folders, workspace_dir, persist_colony, select_line_callback, op
     opts = opts or {},
   }, self)
 
-  for _, folder in pairs(folders) do
-    local _name = folder.name or folder.path
-    table.insert(obj.workspace_names, _name)
+  if folders and workspace_dir then
+    for _, folder in pairs(folders) do
+      local _name = folder.name or folder.path
+      table.insert(obj.workspace_names, _name)
 
-    local full_path = string.gsub(vim.fn.fnamemodify(workspace_dir .. "/" .. folder.path, ":p"), "%/$", "")
-    table.insert(obj.workspaces, { path = full_path })
+      local full_path = string.gsub(vim.fn.fnamemodify(workspace_dir .. "/" .. folder.path, ":p"), "%/$", "")
+      table.insert(obj.workspaces, { path = full_path, name = folder.name })
+    end
   end
 
   return obj

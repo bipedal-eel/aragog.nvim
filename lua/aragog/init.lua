@@ -32,8 +32,7 @@ local function select_line_callback(type, idx)
   elseif type == "burrows" then
     M.switch_burrow(idx)
   else
-    -- 10/10 makes total sense
-    M.switch_burrow(M.ui.workspaces[idx].idx)
+    M.switch_workspace(idx)
   end
 end
 
@@ -84,6 +83,14 @@ function M.switch_burrow(idx)
   end
 end
 
+function M.switch_workspace(idx)
+  if M.ui.workspaces[idx].idx then
+    M.switch_burrow(M.ui.workspaces[idx].idx)
+  else
+    change_dir_by_burrow({ dir = M.ui.workspaces[idx].path })
+  end
+end
+
 function M.root_burrow()
   change_dir_by_burrow({ dir = clutch.root_dir })
 end
@@ -97,10 +104,10 @@ function M.toggle_burrows_window()
 end
 
 function M.toggle_workspace_window()
-  if not clutch.workspaces then
+  if not M.ui.workspaces then
     return
   end
-  M.colony.burrows = M.ui:toggle_workspace(clutch.workspaces, M.colony.burrows)
+  M.colony.burrows = M.ui:toggle_workspace(M.ui.workspaces, M.colony.burrows)
 end
 
 local groupId = vim.api.nvim_create_augroup("aragog", { clear = true })
