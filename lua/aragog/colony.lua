@@ -1,6 +1,6 @@
 require "aragog.globals"
 local utils = require "aragog.utils"
-local file_io = require "aragog.file_io"
+local clutch = require "aragog.clutch"
 
 --Maybe extract colony
 --    colony:add_burrow
@@ -49,7 +49,7 @@ function Colony:new(opts)
     opts = opts or {}
   }, self)
 
-  local content = file_io.read_clutch()
+  local content = clutch.read_clutch()
   if not content or content == "" then
     return obj
   end
@@ -110,7 +110,6 @@ local function hidrate_thread(thread)
 
   -- TODO could put that into a list and have a loop of custom shit to set
   local changed = set_thread_position(thread)
-
   if not changed then
     return
   end
@@ -134,21 +133,16 @@ end
 
 function Colony:on_dir_changed_pre()
   local buf = vim.api.nvim_get_current_buf()
-  if vim.api.nvim_buf_get_name(buf) == "" then
+  if vim.api.nvim_buf_get_name(buf) == "" or not self.current_burrow then
     return
   end
-  if self.current_burrow and not (self.current_thread and self.current_thread.buf == buf) then
-    self.current_thread = create_thread(buf)
-  end
+  self.current_burrow.prev = self.current_thread or create_thread(vim.api.nvim_get_current_buf())
 end
 
 ---@param new_dir string
 function Colony:on_dir_changed(new_dir)
-  if self.current_burrow then
-    self.current_burrow.prev = self.current_thread or create_thread(vim.api.nvim_get_current_buf())
-    if new_dir == self.current_burrow.dir then
-      return
-    end
+  if self.current_burrow and new_dir == self.current_burrow.dir then
+    return
   end
 
   ---@type fun(burrow: Burrow)

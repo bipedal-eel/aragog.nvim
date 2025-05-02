@@ -6,45 +6,42 @@ local VIRT_NS = vim.api.nvim_create_namespace("aragog_virtual_index")
 ---@field debug boolean | nil
 
 ---@alias ui_type "threads" | "burrows"
----@alias Select_line_callback fun(type: ui_type, line_index: integer)
+---@alias select_line_callback fun(type: ui_type, line_index: integer)
 
 ---@class AragogUi
 ---@field type ui_type
 ---@field win integer | nil
 ---@field buf integer | nil
----@field select_line_callback Select_line_callback
----@field persist_colony function
+---@field workspaces workspace[]
+---@field workspace_names string[]
+---@field select_line_callback select_line_callback
+---@field persist_colony fun()
 ---@field opts AragogUiOpts
 local Ui = {}
 Ui.__index = Ui
 
----@param persist_colony function
----@param select_line_callback Select_line_callback
+---@param folders workspace[]
+---@param workspace_dir string
+---@param select_line_callback select_line_callback
 ---@param opts AragogUiOpts | nil
-function Ui:new(persist_colony, select_line_callback, opts)
+function Ui:new(folders, workspace_dir, persist_colony, select_line_callback, opts)
   local obj = setmetatable({
+    workspaces = {},
+    workspace_names = {},
     persist_colony = persist_colony,
     select_line_callback = select_line_callback,
     opts = opts or {},
   }, self)
-  return obj
-end
 
----@type workspace[]
-Ui.workspace_paths_obj = {}
----@type string[]
-Ui.workspace_paths_or_names = {}
-
----@param folders workspace[]
----@param workspace_dir string
-function Ui:init_workspace_paths(folders, workspace_dir)
   for _, folder in pairs(folders) do
     local _name = folder.name or folder.path
-    table.insert(Ui.workspace_paths_or_names, _name)
+    table.insert(obj.workspace_names, _name)
 
     local full_path = string.gsub(vim.fn.fnamemodify(workspace_dir .. "/" .. folder.path, ":p"), "%/$", "")
-    table.insert(Ui.workspace_paths_obj, { path = full_path })
+    table.insert(obj.workspaces, { path = full_path })
   end
+
+  return obj
 end
 
 ---@type function
@@ -119,8 +116,8 @@ end
 
 ---@param self AragogUi
 local function set_local_keymaps(self)
-  assert(self.win, "win must not be nil")
-  assert(self.buf, "buf must not be nil")
+  assert(self.win, "[Aragog] win must not be nil")
+  assert(self.buf, "[Aragog] buf must not be nil")
 
   local close_win = function() self:close_win() end
   vim.api.nvim_buf_set_keymap(self.buf, "n", "<ESC>", "", { callback = close_win, desc = "close window" })
@@ -130,8 +127,12 @@ local function set_local_keymaps(self)
       local line = vim.fn.getcharpos(".")[2]
       self:close_win()
       self.select_line_callback(self.type, line)
-    end
+    end,
+    desc = "select line"
   })
+end
+
+local function set_vsw_local_keymaps(self, pin_cb)
 end
 
 ---@param self AragogUi
@@ -251,15 +252,15 @@ function Ui:toggle_workspace(folders, burrows)
       goto continue
     end
     for j, burrow in pairs(burrows) do
-      if Ui.workspace_paths_obj[i] and Ui.workspace_paths_obj[i].path == burrow.dir then
+      if self.workspaces[i] and self.workspaces[i].path == burrow.dir then
         burrow.name = folder.name
-        Ui.workspace_paths_obj[i].idx = j
+        self.workspaces[i].idx = j
       end
     end
     ::continue::
   end
 
-  local line_count = #Ui.workspace_paths_or_names
+  local line_count = #self.workspace_names
   local width = math.floor(vim.o.columns * 0.6)
   local height = 6 > line_count and 6 or line_count
   local col = math.floor((vim.o.columns - width) / 2)
@@ -281,56 +282,76 @@ function Ui:toggle_workspace(folders, burrows)
     vim.api.nvim_buf_clear_namespace(self.buf, VIRT_NS, 0, -1)
     for i = 0, line_count - 1, 1 do
       vim.api.nvim_buf_set_extmark(self.buf, VIRT_NS, i, 0, {
-        virt_text = { { string.format("%s  ", Ui.workspace_paths_obj[i + 1].idx or " "), "Error" } }, -- Error for red, Comment for semi-transparent, Info for regular
+        virt_text = { { string.format("%s  ", self.workspaces[i + 1].idx or " "), "Error" } }, -- Error for red, Comment for semi-transparent, Info for regular
         virt_text_pos = "inline",
         hl_mode = "combine",
       })
     end
   end
 
-  local pin_cb = function(i)
+  ---@param i integer | nil
+  local pin = function(i)
+    if not i then
+      i = #burrows + 1 or 1
+    end
+
     local idx = vim.fn.getcharpos(".")[2]
-    local path = Ui.workspace_paths_obj[idx].path
-    for _, obj in pairs(Ui.workspace_paths_obj) do
-      if obj.idx == i then
-        obj.idx = nil
+    local path = self.workspaces[idx].path
+    for _, ws in pairs(self.workspaces) do
+      if ws.idx == i then
+        ws.idx = nil
       end
     end
-    Ui.workspace_paths_obj[idx].idx = i
+    self.workspaces[idx].idx = i
 
     if not burrows then
       burrows = {}
     end
     for _, burrow in pairs(burrows) do
       if burrow.dir == path then
-        burrows[i] = Ui.workspace_paths_obj[idx]
+        burrows[i] = { dir = self.workspaces[idx].path, name = self.workspaces[idx].name }
       end
     end
     burrows[i] = { dir = path }
     set_virtual_indeces()
   end
 
+  local un_pin = function()
+    if not burrows then
+      return
+    end
+    local idx = vim.fn.getcharpos(".")[2]
+    burrows[self.workspaces[idx].idx] = nil
+    self.workspaces[idx].idx = nil
+    set_virtual_indeces()
+  end
+
   vim.api.nvim_buf_set_keymap(self.buf, "n", "1", "", {
-    callback = utils.fun(pin_cb, 1),
+    callback = utils.fun(pin, 1),
     desc = "pin as first burrow"
   })
-
   vim.api.nvim_buf_set_keymap(self.buf, "n", "2", "", {
-    callback = utils.fun(pin_cb, 2),
+    callback = utils.fun(pin, 2),
     desc = "pin as second burrow"
   })
-
   vim.api.nvim_buf_set_keymap(self.buf, "n", "3", "", {
-    callback = utils.fun(pin_cb, 3),
+    callback = utils.fun(pin, 3),
     desc = "pin as third burrow"
   })
-
   vim.api.nvim_buf_set_keymap(self.buf, "n", "4", "", {
-    callback = utils.fun(pin_cb, 4),
-    desc = "pin as third burrow"
+    callback = utils.fun(pin, 4),
+    desc = "pin as fourth burrow"
+  })
+  vim.api.nvim_buf_set_keymap(self.buf, "n", "a", "", {
+    callback = pin,
+    desc = "pin as last burrow"
+  })
+  vim.api.nvim_buf_set_keymap(self.buf, "n", "x", "", {
+    callback = un_pin,
+    desc = "unpin"
   })
 
-  vim.api.nvim_buf_set_lines(self.buf, 0, -1, false, Ui.workspace_paths_or_names)
+  vim.api.nvim_buf_set_lines(self.buf, 0, -1, false, self.workspace_names)
   vim.api.nvim_set_option_value("modifiable", false, { scope = "local", buf = self.buf })
   vim.api.nvim_set_option_value("readonly", true, { scope = "local", buf = self.buf })
   vim.api.nvim_set_option_value("relativenumber", true, { scope = "local", win = self.win })
@@ -342,7 +363,6 @@ function Ui:toggle_workspace(folders, burrows)
     buffer = self.buf,
     group = groupId,
     callback = function()
-      -- lines_converter(vim.api.nvim_buf_get_lines(self.buf, 0, -1, false))
       vim.api.nvim_del_augroup_by_id(groupId)
 
       self.buf = nil

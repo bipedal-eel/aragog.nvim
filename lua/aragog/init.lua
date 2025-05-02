@@ -1,10 +1,11 @@
 require "aragog.globals"
 local utils = require "aragog.utils"
-local file_io = require "aragog.file_io"
+local clutch = require "aragog.clutch"
 local AragogUi = require "aragog.ui"
 local Colony = require "aragog.colony"
 
 ---@class AragogOpts
+---@field vsc_workspace_dir string | nil
 ---@field debug boolean | nil
 
 ---@class Aragog
@@ -15,7 +16,7 @@ local M = {}
 
 ---TODO move to appropriate place something with persisting (merge with io)
 local function persist_colony()
-  local ok, res = pcall(file_io.write_to_clutch, vim.json.encode(M.colony.burrows))
+  local ok, res = pcall(clutch.write_to_clutch, vim.json.encode(M.colony.burrows))
   if not ok then
     vim.notify("error persisting colony" .. res, vim.log.levels.ERROR)
     return
@@ -31,21 +32,22 @@ local function select_line_callback(type, idx)
   elseif type == "burrows" then
     M.switch_burrow(idx)
   else
-    print("select_line_callback")
+    -- 10/10 makes total sense
+    M.switch_burrow(M.ui.workspaces[idx].idx)
   end
 end
 
 ---@param opts AragogOpts | nil
 function M.setup(opts)
   M.opts = opts or {}
+  M.opts.vsc_workspace_dir = M.opts.vsc_workspace_dir or "./.vscode"
 
   utils.root_dir_head = vim.fn.fnamemodify(vim.fn.getcwd(), ":h")
-  file_io.init()
+  clutch.init()
   M.colony = Colony:new({
     debug = M.opts.debug,
   })
-  M.ui = AragogUi:new(persist_colony, select_line_callback)
-  AragogUi:init_workspace_paths(file_io.workspaces, "./.vscode")
+  M.ui = AragogUi:new(clutch.workspaces, M.opts.vsc_workspace_dir, persist_colony, select_line_callback)
 end
 
 ---@param destBurrow Burrow
@@ -83,7 +85,7 @@ function M.switch_burrow(idx)
 end
 
 function M.root_burrow()
-  change_dir_by_burrow({ dir = file_io.root_dir })
+  change_dir_by_burrow({ dir = clutch.root_dir })
 end
 
 function M.toggle_current_threads_window()
@@ -95,13 +97,12 @@ function M.toggle_burrows_window()
 end
 
 function M.toggle_workspace_window()
-  if not file_io.workspaces then
+  if not clutch.workspaces then
     return
   end
-  M.colony.burrows = M.ui:toggle_workspace(file_io.workspaces, M.colony.burrows)
+  M.colony.burrows = M.ui:toggle_workspace(clutch.workspaces, M.colony.burrows)
 end
 
--- TODO only save on VimLeavePre and hidrate on BufLeave -- gotta check if that works properly
 local groupId = vim.api.nvim_create_augroup("aragog", { clear = true })
 vim.api.nvim_create_autocmd({ "BufLeave", "VimLeavePre" }, {
   group = groupId,

@@ -1,4 +1,4 @@
-local file_io = require "aragog.file_io"
+local file_io = require "aragog.clutch"
 
 local input = [[
 {
