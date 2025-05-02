@@ -1,12 +1,10 @@
 require "aragog.globals"
-local utils = require "aragog.utils"
 local clutch = require "aragog.clutch"
 local AragogUi = require "aragog.ui"
 local Colony = require "aragog.colony"
 
 ---@class AragogOpts
 ---@field vsc_workspace_dir string | nil
----@field debug boolean | nil
 
 ---@class Aragog
 ---@field colony Colony
@@ -41,11 +39,8 @@ function M.setup(opts)
   M.opts = opts or {}
   M.opts.vsc_workspace_dir = M.opts.vsc_workspace_dir or "./.vscode"
 
-  utils.root_dir_head = vim.fn.fnamemodify(vim.fn.getcwd(), ":h")
   clutch.init()
-  M.colony = Colony:new({
-    debug = M.opts.debug,
-  })
+  M.colony = Colony:new()
   M.ui = AragogUi:new(clutch.workspaces, M.opts.vsc_workspace_dir, persist_colony, select_line_callback)
 end
 
@@ -119,15 +114,9 @@ vim.api.nvim_create_autocmd({ "BufLeave", "VimLeavePre" }, {
     end
     M.colony:hidrate_current_thread()
 
-    if Get_is_colony_stored() then
-      print("not saving")
-      return
+    if not Get_is_colony_stored() then
+      persist_colony()
     end
-    if M.opts.debug then
-      print("going to save")
-    end
-
-    persist_colony()
   end,
 })
 
@@ -135,7 +124,7 @@ vim.api.nvim_create_autocmd("DirChanged", {
   group = groupId,
   callback = function(args)
     if args.match == "global" then
-      M.colony:on_dir_changed(args.file)
+      M.colony:on_dir_changed(args.file, M.ui.workspaces)
     end
   end
 })

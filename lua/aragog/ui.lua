@@ -2,9 +2,6 @@ local utils = require "aragog.utils"
 
 local VIRT_NS = vim.api.nvim_create_namespace("aragog_virtual_index")
 
----@class AragogUiOpts
----@field debug boolean | nil
-
 ---@alias ui_type "threads" | "burrows"
 ---@alias select_line_callback fun(type: ui_type, line_index: integer)
 
@@ -16,14 +13,12 @@ local VIRT_NS = vim.api.nvim_create_namespace("aragog_virtual_index")
 ---@field workspace_names string[]
 ---@field select_line_callback select_line_callback
 ---@field persist_colony fun()
----@field opts AragogUiOpts
 local Ui = {}
 Ui.__index = Ui
 
 ---@param folders workspace[] | nil
 ---@param workspace_dir string | nil
 ---@param select_line_callback select_line_callback
----@param opts AragogUiOpts | nil
 function Ui:new(folders, workspace_dir, persist_colony, select_line_callback, opts)
   local obj = setmetatable({
     workspaces = {},
@@ -132,9 +127,6 @@ local function set_local_keymaps(self)
     end,
     desc = "select line"
   })
-end
-
-local function set_vsw_local_keymaps(self, pin_cb)
 end
 
 ---@param self AragogUi
@@ -249,17 +241,15 @@ end
 ---@param burrows Burrow[] | nil
 ---@return Burrow[] new_burrows
 function Ui:toggle_workspace(folders, burrows)
-  for i, folder in pairs(folders) do
-    if not burrows then
-      goto continue
-    end
-    for j, burrow in pairs(burrows) do
-      if self.workspaces[i] and self.workspaces[i].path == burrow.dir then
-        burrow.name = folder.name
-        self.workspaces[i].idx = j
+  if burrows then
+    for i, folder in pairs(folders) do
+      for j, burrow in pairs(burrows) do
+        if self.workspaces[i] and self.workspaces[i].path == burrow.dir then
+          burrow.name = folder.name
+          self.workspaces[i].idx = j
+        end
       end
     end
-    ::continue::
   end
 
   local line_count = #self.workspace_names
@@ -294,7 +284,7 @@ function Ui:toggle_workspace(folders, burrows)
   ---@param i integer | nil
   local pin = function(i)
     if not i then
-      i = #burrows + 1 or 1
+      i = burrows and #burrows + 1 or 1
     end
 
     local idx = vim.fn.getcharpos(".")[2]

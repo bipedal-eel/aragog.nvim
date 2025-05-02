@@ -2,25 +2,6 @@ require "aragog.globals"
 local utils = require "aragog.utils"
 local clutch = require "aragog.clutch"
 
---Maybe extract colony
---    colony:add_burrow
---    ---when adding thread abs path should be set. Also when allowing whatever via ui (compare harpoon)
---    ---destThread.path = vim.fn.fnamemodify(file_to_add, ":p")
---    colony:add_thread
---    colony:update_threads
---    colony:update_burrow
---
---local current_burrow
---function M.switch_burrow(destBurrow)
---end
---
---autocmd BufLeave
---check if still in current_burrow and adjust (switch to appropriate)
---  vim.startswith(s, prefix)
-
----@class ColonyOpts
----@field debug boolean | nil
-
 --TODO could be cool to to have custom stuff in this. Would also  require custom mapping functions.
 ---@class Thread
 ---@field path string
@@ -35,22 +16,23 @@ local clutch = require "aragog.clutch"
 ---@field threads Thread[] | nil
 
 ---@class Colony
----@field opts ColonyOpts
 ---@field burrows Burrow[] | nil
 ---@field current_burrow Burrow | nil
 ---@field current_thread Thread | nil
 local Colony = {}
 Colony.__index = Colony
 
----@param opts ColonyOpts | nil
 ---@return Colony
-function Colony:new(opts)
-  local obj = setmetatable({
-    opts = opts or {}
-  }, self)
+function Colony:new()
+  local obj = setmetatable({}, self)
 
   local content = clutch.read_clutch()
-  if not content or content == "" then
+  -- cases:
+  --  non existent
+  --  ""
+  --  []
+  --  null
+  if not content or #content < 5 then
     return obj
   end
 
@@ -140,7 +122,8 @@ function Colony:on_dir_changed_pre()
 end
 
 ---@param new_dir string
-function Colony:on_dir_changed(new_dir)
+---@param workspaces workspace[] | nil
+function Colony:on_dir_changed(new_dir, workspaces)
   if self.current_burrow and new_dir == self.current_burrow.dir then
     return
   end
@@ -159,14 +142,27 @@ function Colony:on_dir_changed(new_dir)
     end
   end
 
-  for _, burrow in pairs(self.burrows) do
-    if burrow.dir == new_dir then
-      on_found_burrow(burrow)
-      return
+  if self.burrows then
+    for _, burrow in pairs(self.burrows) do
+      if burrow.dir == new_dir then
+        on_found_burrow(burrow)
+        return
+      end
     end
   end
 
   self.current_burrow = nil
+  if workspaces then
+    for _, ws in pairs(workspaces) do
+      if new_dir == ws.path then
+        Set_current_burrow_dir(new_dir, ws.name)
+        return
+      end
+    end
+  end
+
+  print("testststtsts")
+  -- fallback, not in workspaces nor burrows
   Set_current_burrow_dir(new_dir)
 end
 
