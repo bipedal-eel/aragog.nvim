@@ -2,7 +2,7 @@ local utils = require "aragog.utils"
 
 local VIRT_NS = vim.api.nvim_create_namespace("aragog_virtual_index")
 
----@alias ui_type "threads" | "burrows"
+---@alias ui_type "threads" | "burrows" | "workspaces"
 ---@alias select_line_callback fun(type: ui_type, line_index: integer)
 
 ---@class AragogUi
@@ -99,7 +99,11 @@ local function map_paths_to_threads(burrow, rel_paths, rel_new_paths)
       goto continue
     end
 
-    local index = vim.fn.indexof(rel_paths, string.format("v:val == %q", rel_new_paths[i]))
+    if new_path:sub(1, 1) == "/" then
+      new_path = vim.fn.fnamemodify(new_path, ":.")
+    end
+
+    local index = vim.fn.indexof(rel_paths, string.format("v:val == %q", new_path))
     if index ~= -1 then
       table.insert(new_threads, burrow.threads[index + 1])
     else
@@ -168,13 +172,13 @@ local function open_generic_window(self, paths, lines_converter)
 end
 
 function Ui:close_win()
-  vim.api.nvim_win_close(self.win, true)
+  pcall(vim.api.nvim_win_close, self.win, true)
   self.buf = nil
   self.win = nil
 end
 
 ---TODO restriction: "moving" not working
----@param colony Colony | nil
+---@param colony Colony
 function Ui:toggle_burrows(colony)
   if self.win then
     self:close_win()
@@ -183,16 +187,16 @@ function Ui:toggle_burrows(colony)
     end
   end
 
-  if not colony then
-    return
-  end
+  assert(colony, "[Aragog] colony cannot be nil")
 
   local paths = {}
   local root = vim.fn.fnamemodify(utils.root_dir_head, ":p")
 
-  for _, burrow in pairs(colony.burrows or {}) do
-    local rel_path = burrow.dir:gsub("^" .. vim.pesc(root), "")
-    table.insert(paths, rel_path ~= "" and "/" .. rel_path or burrow.dir)
+  if colony.burrows then
+    for _, burrow in pairs(colony.burrows) do
+      local rel_path = burrow.dir:gsub("^" .. vim.pesc(root), "")
+      table.insert(paths, rel_path ~= "" and "/" .. rel_path or burrow.dir)
+    end
   end
 
   local lines_to_burrows = function(lines)
@@ -210,8 +214,8 @@ function Ui:toggle_burrows(colony)
   self.type = "burrows"
 end
 
----@param burrow Burrow | nil
-function Ui:toggle_threads(burrow)
+---@param colony Colony
+function Ui:toggle_threads(colony)
   if self.win then
     self:close_win()
     if self.type == "threads" then
@@ -219,9 +223,7 @@ function Ui:toggle_threads(burrow)
     end
   end
 
-  if not burrow then
-    return
-  end
+  local burrow = colony.current_burrow or { dir = vim.fn.getcwd() }
 
   local paths = {}
   for _, thread in pairs(burrow.threads and burrow.threads or {}) do
@@ -230,6 +232,13 @@ function Ui:toggle_threads(burrow)
 
   local lines_to_threads = function(lines)
     burrow.threads = map_paths_to_threads(burrow, paths, lines)
+    if #burrow.threads ~= 0 then
+      colony.current_burrow = burrow
+
+      if not colony.burrows or #colony.burrows == 0 then
+        colony.burrows = { burrow }
+      end
+    end
   end
 
   open_generic_window(self, paths, lines_to_threads)
@@ -238,12 +247,19 @@ end
 
 ---TODO restrictions: "moving" does not work and duplicates are possible (old position not cleaned (not a big issue))
 ---@param folders workspace[]
----@param burrows Burrow[] | nil
----@return Burrow[] new_burrows
-function Ui:toggle_workspace(folders, burrows)
-  if burrows then
+---@param colony Colony
+function Ui:toggle_workspace(folders, colony)
+  if self.win then
+    self:close_win()
+    if self.type == "workspaces" then
+      return
+    end
+  end
+
+  if colony.burrows then
     for i, folder in pairs(folders) do
-      for j, burrow in pairs(burrows) do
+      self.workspaces[i].idx = nil
+      for j, burrow in pairs(colony.burrows) do
         if self.workspaces[i] and self.workspaces[i].path == burrow.dir then
           burrow.name = folder.name
           self.workspaces[i].idx = j
@@ -268,7 +284,7 @@ function Ui:toggle_workspace(folders, burrows)
     row = row,
     border = "rounded"
   })
-  set_local_keymaps(self)
+  self.type = "workspaces"
 
   local set_virtual_indeces = function()
     vim.api.nvim_buf_clear_namespace(self.buf, VIRT_NS, 0, -1)
@@ -283,8 +299,11 @@ function Ui:toggle_workspace(folders, burrows)
 
   ---@param i integer | nil
   local pin = function(i)
+    if not colony.burrows then
+      colony.burrows = {}
+    end
     if not i then
-      i = burrows and #burrows + 1 or 1
+      i = colony.burrows and #colony.burrows + 1 or 1
     end
 
     local idx = vim.fn.getcharpos(".")[2]
@@ -296,24 +315,26 @@ function Ui:toggle_workspace(folders, burrows)
     end
     self.workspaces[idx].idx = i
 
-    if not burrows then
-      burrows = {}
-    end
-    for _, burrow in pairs(burrows) do
+    local found = false
+    for _, burrow in pairs(colony.burrows) do
       if burrow.dir == path then
-        burrows[i] = { dir = self.workspaces[idx].path, name = self.workspaces[idx].name }
+        found = true
+        burrow.dir = self.workspaces[idx].path
+        burrow.name = self.workspaces[idx].name
       end
     end
-    burrows[i] = { dir = path }
+    if not found then
+      colony.burrows[i] = { dir = path, name = self.workspaces[idx].name }
+    end
     set_virtual_indeces()
   end
 
   local un_pin = function()
-    if not burrows then
+    if not colony.burrows then
       return
     end
     local idx = vim.fn.getcharpos(".")[2]
-    burrows[self.workspaces[idx].idx] = nil
+    colony.burrows[self.workspaces[idx].idx] = nil
     self.workspaces[idx].idx = nil
     set_virtual_indeces()
   end
@@ -342,6 +363,7 @@ function Ui:toggle_workspace(folders, burrows)
     callback = un_pin,
     desc = "unpin"
   })
+  set_local_keymaps(self)
 
   vim.api.nvim_buf_set_lines(self.buf, 0, -1, false, self.workspace_names)
   vim.api.nvim_set_option_value("modifiable", false, { scope = "local", buf = self.buf })
@@ -362,8 +384,6 @@ function Ui:toggle_workspace(folders, burrows)
       self.persist_colony()
     end,
   })
-
-  return burrows
 end
 
 return Ui

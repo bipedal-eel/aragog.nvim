@@ -68,9 +68,6 @@ TODO
 
 ## 🚧 Roadmap
 
-- [ ] Robustnes issues:
-  - need to add thread before being able to add vsw folders
-  - dap in burrows window breaks vsw handling
 - [ ] proper moving of burrows in both burrow and workspace ui
 - [ ] unpinned workspaces (vs-workspace-file without vs-workspace-file)
 - [ ] Nesting?

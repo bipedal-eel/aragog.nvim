@@ -91,7 +91,7 @@ function M.root_burrow()
 end
 
 function M.toggle_current_threads_window()
-  M.ui:toggle_threads(M.colony.current_burrow)
+  M.ui:toggle_threads(M.colony)
 end
 
 function M.toggle_burrows_window()
@@ -102,11 +102,11 @@ function M.toggle_workspace_window()
   if not M.ui.workspaces then
     return
   end
-  M.colony.burrows = M.ui:toggle_workspace(M.ui.workspaces, M.colony.burrows)
+  M.ui:toggle_workspace(M.ui.workspaces, M.colony)
 end
 
 local groupId = vim.api.nvim_create_augroup("aragog", { clear = true })
-vim.api.nvim_create_autocmd({ "BufLeave", "VimLeavePre" }, {
+vim.api.nvim_create_autocmd("BufLeave", {
   group = groupId,
   callback = function(args)
     if not M.colony.current_burrow or not M.colony.current_thread or M.colony.current_thread.buf ~= args.buf then
@@ -118,6 +118,14 @@ vim.api.nvim_create_autocmd({ "BufLeave", "VimLeavePre" }, {
       persist_colony()
     end
   end,
+})
+
+vim.api.nvim_create_autocmd("VimLeavePre", {
+  group = groupId,
+  callback = function()
+    M.colony:hidrate_current_thread()
+    persist_colony()
+  end
 })
 
 vim.api.nvim_create_autocmd("DirChanged", {
