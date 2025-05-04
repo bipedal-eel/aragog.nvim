@@ -21,7 +21,8 @@ Most project/file nav plugins are like little garden spiders.
 - **Workspace-level awareness** — not just open files
 - **Persistent layouts** you can re-enter like you never left
 - Built on a web of smart, flexible metaphors
-  > — _Freebie Gpt_
+
+> — _Freebie Gpt_
 
 ## Key Concepts
 
@@ -30,6 +31,20 @@ Most project/file nav plugins are like little garden spiders.
 | Colony  | A collection of related workspaces (projects) |
 | Burrow  | A single workspace within a Colony            |
 | Thread  | A target file or destination within a Burrow  |
+
+## Usage
+
+Display vs workspaces, add to burrows with `a`, remove with `x` or set to index with `1`, `2`, `3`, `4`
+
+<img src="./assets/vs_workspace.png">
+
+Display burrows (the list can be edited)
+
+<img src="./assets/burrows.png">
+
+Display threads of current burrow (the list can be edited)
+
+<img src="./assets/threads.png">
 
 ## Installation
 
