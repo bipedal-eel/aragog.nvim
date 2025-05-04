@@ -6,24 +6,24 @@ Inspired by the vast, intelligent web of Aragog and his kin, this plugin lets yo
 > "The spiders fled before me. But Aragog remained."  
 > — _Rubeus Hagrid (probably talking about your workflow)_
 
-## 🧠 TL;DR
+## TL;DR
 
 - Organize related workspaces into a **Colony**
 - Each Colony is made up of individual **Burrows** (workspaces)
 - Track and jump to pinned **Threads** (files/buffers) within a Burrow
 
-## 🕷️ Why Aragog?
+## Why Aragog?
 
 Most project/file nav plugins are like little garden spiders.  
 **Aragog** is the king of the Forbidden Forest.
 
-- ⏱️ **Blazingly fast** file jumps within and across projects
-- 🧭 **Workspace-level awareness** — not just open files
-- 💾 **Persistent layouts** you can re-enter like you never left
-- 🕸️ Built on a web of smart, flexible metaphors
-  > --- _Freebyie Gpt_
+- **Blazingly fast** file jumps within and across projects
+- **Workspace-level awareness** — not just open files
+- **Persistent layouts** you can re-enter like you never left
+- Built on a web of smart, flexible metaphors
+  > — _Freebyie Gpt_
 
-## 🌐 Key Concepts
+## Key Concepts
 
 | Concept | Description                                   |
 | :-----: | --------------------------------------------- |
@@ -31,7 +31,7 @@ Most project/file nav plugins are like little garden spiders.
 | Burrow  | A single workspace within a Colony            |
 | Thread  | A target file or destination within a Burrow  |
 
-## 📦 Installation
+## Installation
 
 - install using lazy.nvim
 
@@ -62,11 +62,25 @@ Most project/file nav plugins are like little garden spiders.
 }
 ```
 
-## 🔍 Example Usage
+## lualine
 
-TODO
+The current burrow is set as a global variable `aragog_current_burrow` and can thus be displayed in your lualine.
 
-## 🚧 Roadmap
+```lua
+lualine_x = { "g:aragog_current_burrow", "encoding", "fileformat", "filetype" },
+```
+
+If there is a .vscode/\*-code.workspaces file, argog_current_burrow is set to the name of the workspace.
+
+[Root](./assets/current_burrow_root.png)
+
+[Aragog](./assets/current_burrow_aragog.png.png)
+
+The relative path is shown
+
+[Test](./assets/current_burrow_test.png.png)
+
+## Roadmap
 
 - [ ] proper moving of burrows in both burrow and workspace ui
 - [ ] unpinned workspaces (vs-workspace-file without vs-workspace-file)
