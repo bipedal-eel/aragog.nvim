@@ -26,11 +26,11 @@ end
 ---@param idx integer index of destination thread in current burrow
 local function select_line_callback(type, idx)
   if type == "threads" then
-    M.goto_thread_destination(idx)
+    M.thread(idx)
   elseif type == "burrows" then
-    M.switch_burrow(idx)
+    M.burrow(idx)
   else
-    M.switch_workspace(idx)
+    M.workspace(idx)
   end
 end
 
@@ -58,7 +58,7 @@ end
 
 ---Open file or buffer of Thread[idx] in current Burrow
 ---@param idx integer index of destination thread in current burrow
-function M.goto_thread_destination(idx)
+function M.thread(idx)
   local ok, thread = pcall(function() return M.colony.current_burrow.threads[idx] end)
   if not ok or not thread then
     return
@@ -68,7 +68,7 @@ function M.goto_thread_destination(idx)
 end
 
 ---@param idx integer index of burrow to go to
-function M.switch_burrow(idx)
+function M.burrow(idx)
   local ok, burrow = pcall(function() return M.colony.burrows and M.colony.burrows[idx] end)
   if not ok or not burrow then
     return
@@ -78,9 +78,9 @@ function M.switch_burrow(idx)
   end
 end
 
-function M.switch_workspace(idx)
+function M.workspace(idx)
   if M.ui.workspaces[idx].idx then
-    M.switch_burrow(M.ui.workspaces[idx].idx)
+    M.burrow(M.ui.workspaces[idx].idx)
   else
     change_dir_by_burrow({ dir = M.ui.workspaces[idx].path })
   end
@@ -90,15 +90,15 @@ function M.root_burrow()
   change_dir_by_burrow({ dir = clutch.root_dir })
 end
 
-function M.toggle_current_threads_window()
+function M.toggle_current_threads()
   M.ui:toggle_threads(M.colony)
 end
 
-function M.toggle_burrows_window()
+function M.toggle_burrows()
   M.ui:toggle_burrows(M.colony)
 end
 
-function M.toggle_workspace_window()
+function M.toggle_workspace()
   if not M.ui.workspaces then
     return
   end
