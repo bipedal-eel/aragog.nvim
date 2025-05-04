@@ -77,7 +77,7 @@ Display threads of current burrow (the list can be edited)
 }
 ```
 
-## lualine
+## Lualine
 
 The current burrow is set as a global variable `aragog_current_burrow` and can thus be displayed in your lualine.
 
