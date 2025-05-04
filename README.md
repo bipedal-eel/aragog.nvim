@@ -21,7 +21,7 @@ Most project/file nav plugins are like little garden spiders.
 - **Workspace-level awareness** — not just open files
 - **Persistent layouts** you can re-enter like you never left
 - Built on a web of smart, flexible metaphors
-  > — _Freebyie Gpt_
+  > — _Freebie Gpt_
 
 ## Key Concepts
 
