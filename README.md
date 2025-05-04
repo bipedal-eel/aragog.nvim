@@ -72,17 +72,10 @@ lualine_x = { "g:aragog_current_burrow", "encoding", "fileformat", "filetype" },
 
 If there is a .vscode/\*-code.workspaces file, argog_current_burrow is set to the name of the workspace.
 
-[Root](./assets/current_burrow_root.png)
+<img src="./assets/current_burrow_root.png">
 
-[Aragog](./assets/current_burrow_aragog.png.png)
+<img src="./assets/current_burrow_aragog.png">
 
-The relative path is shown
+The relative path is shown as fallback
 
-[Test](./assets/current_burrow_test.png.png)
-
-## Roadmap
-
-- [ ] proper moving of burrows in both burrow and workspace ui
-- [ ] unpinned workspaces (vs-workspace-file without vs-workspace-file)
-- [ ] Nesting?
-- [ ] Logging
+<img src="./assets/current_burrow_test.png">
