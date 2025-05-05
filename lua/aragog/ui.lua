@@ -339,19 +339,19 @@ function Ui:toggle_workspace(folders, colony)
     set_virtual_indeces()
   end
 
-  vim.api.nvim_buf_set_keymap(self.buf, "n", "1", "", {
+  vim.api.nvim_buf_set_keymap(self.buf, "n", "<M-1>", "", {
     callback = utils.fun(pin, 1),
     desc = "pin as first burrow"
   })
-  vim.api.nvim_buf_set_keymap(self.buf, "n", "2", "", {
+  vim.api.nvim_buf_set_keymap(self.buf, "n", "<M-2>", "", {
     callback = utils.fun(pin, 2),
     desc = "pin as second burrow"
   })
-  vim.api.nvim_buf_set_keymap(self.buf, "n", "3", "", {
+  vim.api.nvim_buf_set_keymap(self.buf, "n", "<M-3>", "", {
     callback = utils.fun(pin, 3),
     desc = "pin as third burrow"
   })
-  vim.api.nvim_buf_set_keymap(self.buf, "n", "4", "", {
+  vim.api.nvim_buf_set_keymap(self.buf, "n", "<M-4>", "", {
     callback = utils.fun(pin, 4),
     desc = "pin as fourth burrow"
   })

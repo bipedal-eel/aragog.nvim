@@ -34,7 +34,7 @@ Most project/file nav plugins are like little garden spiders.
 
 ## Usage
 
-Display vs workspaces, add to burrows with `a`, remove with `x` or set to index with `1`, `2`, `3`, `4`
+Display vs workspaces, add to burrows with `a`, remove with `x` or set to index with `<M-1>` to `<M-4>`
 
 <img src="./assets/vs_workspace.png">
 
