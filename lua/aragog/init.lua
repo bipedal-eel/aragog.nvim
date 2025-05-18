@@ -34,6 +34,40 @@ local function select_line_callback(type, idx)
   end
 end
 
+local function set_autocmds()
+  local groupId = vim.api.nvim_create_augroup("aragog", { clear = true })
+  vim.api.nvim_create_autocmd("BufLeave", {
+    group = groupId,
+    callback = function(args)
+      if not M.colony.current_burrow or not M.colony.current_thread or M.colony.current_thread.buf ~= args.buf then
+        return
+      end
+      M.colony:hidrate_current_thread()
+
+      if not Get_is_colony_stored() then
+        persist_colony()
+      end
+    end,
+  })
+
+  vim.api.nvim_create_autocmd("VimLeavePre", {
+    group = groupId,
+    callback = function()
+      M.colony:hidrate_current_thread()
+      persist_colony()
+    end
+  })
+
+  vim.api.nvim_create_autocmd("DirChanged", {
+    group = groupId,
+    callback = function(args)
+      if args.match == "global" then
+        M.colony:on_dir_changed(args.file, M.ui.workspaces)
+      end
+    end
+  })
+end
+
 ---@param opts AragogOpts | nil
 function M.setup(opts)
   M.opts = opts or {}
@@ -42,6 +76,8 @@ function M.setup(opts)
   clutch.init()
   M.colony = Colony:new()
   M.ui = AragogUi:new(clutch.workspaces, M.opts.vsc_workspace_dir, persist_colony, select_line_callback)
+
+  set_autocmds()
 end
 
 ---@param destBurrow Burrow
@@ -104,37 +140,5 @@ function M.toggle_workspace()
   end
   M.ui:toggle_workspace(M.ui.workspaces, M.colony)
 end
-
-local groupId = vim.api.nvim_create_augroup("aragog", { clear = true })
-vim.api.nvim_create_autocmd("BufLeave", {
-  group = groupId,
-  callback = function(args)
-    if not M.colony.current_burrow or not M.colony.current_thread or M.colony.current_thread.buf ~= args.buf then
-      return
-    end
-    M.colony:hidrate_current_thread()
-
-    if not Get_is_colony_stored() then
-      persist_colony()
-    end
-  end,
-})
-
-vim.api.nvim_create_autocmd("VimLeavePre", {
-  group = groupId,
-  callback = function()
-    M.colony:hidrate_current_thread()
-    persist_colony()
-  end
-})
-
-vim.api.nvim_create_autocmd("DirChanged", {
-  group = groupId,
-  callback = function(args)
-    if args.match == "global" then
-      M.colony:on_dir_changed(args.file, M.ui.workspaces)
-    end
-  end
-})
 
 return M
