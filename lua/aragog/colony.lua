@@ -1,5 +1,4 @@
 require "aragog.globals"
-local utils = require "aragog.utils"
 local clutch = require "aragog.clutch"
 
 --TODO could be cool to to have custom stuff in this. Would also  require custom mapping functions.
@@ -137,7 +136,9 @@ function Colony:on_dir_changed(new_dir, workspaces)
       self:open_thread(burrow.prev)
       if cold_dir then
         -- when "cold starting" a buffer in a changed directory, other plugins (TS, Lsp, ...) may be confused hence this:
-        vim.defer_fn(utils.fun(vim.api.nvim_cmd, { cmd = "e" }, {}), 1)
+        vim.defer_fn(function()
+          vim.api.nvim_cmd({ cmd = "e" }, {})
+        end, 1)
       end
     end
   end

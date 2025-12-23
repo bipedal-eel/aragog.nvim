@@ -340,19 +340,19 @@ function Ui:toggle_workspace(folders, colony)
   end
 
   vim.api.nvim_buf_set_keymap(self.buf, "n", "<M-1>", "", {
-    callback = utils.fun(pin, 1),
+    callback = function() utils.fun(pin, 1) end,
     desc = "pin as first burrow"
   })
   vim.api.nvim_buf_set_keymap(self.buf, "n", "<M-2>", "", {
-    callback = utils.fun(pin, 2),
+    callback = function() utils.fun(pin, 2) end,
     desc = "pin as second burrow"
   })
   vim.api.nvim_buf_set_keymap(self.buf, "n", "<M-3>", "", {
-    callback = utils.fun(pin, 3),
+    callback = function() utils.fun(pin, 3) end,
     desc = "pin as third burrow"
   })
   vim.api.nvim_buf_set_keymap(self.buf, "n", "<M-4>", "", {
-    callback = utils.fun(pin, 4),
+    callback = function() utils.fun(pin, 4) end,
     desc = "pin as fourth burrow"
   })
   vim.api.nvim_buf_set_keymap(self.buf, "n", "a", "", {
