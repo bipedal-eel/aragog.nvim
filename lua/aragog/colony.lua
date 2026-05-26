@@ -1,4 +1,3 @@
-require "aragog.globals"
 local clutch = require "aragog.clutch"
 
 --TODO could be cool to to have custom stuff in this. Would also  require custom mapping functions.
@@ -73,7 +72,7 @@ end
 local function set_thread_position(thread)
   local charPos = vim.fn.getcharpos(".")
 
-  if thread.line and thread.line == charPos[2] and thread.col == thread.col then
+  if thread.line and thread.line == charPos[2] and thread.col == charPos[3] then
     return false
   end
 
@@ -162,7 +161,6 @@ function Colony:on_dir_changed(new_dir, workspaces)
     end
   end
 
-  print("testststtsts")
   -- fallback, not in workspaces nor burrows
   Set_current_burrow_dir(new_dir)
 end

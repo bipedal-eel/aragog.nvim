@@ -1,8 +1,11 @@
 ---@class Utils
----@field root_dir_head string
-local M = {}
-
-M.root_dir_head = vim.fn.fnamemodify(vim.fn.getcwd(), ":h")
+local M = setmetatable({}, {
+  __index = function(_, k)
+    if k == "root_dir_head" then
+      return vim.fn.fnamemodify(vim.fn.getcwd(), ":h")
+    end
+  end
+})
 
 ---@param fn function
 ---@param ... unknown
