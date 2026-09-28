@@ -77,6 +77,20 @@ Display threads of current burrow (the list can be edited)
 }
 ```
 
+## Workspace picker
+
+`toggle_workspace()` uses `vim.ui.select`, so it follows whatever UI you have registered for it. For example:
+
+```lua
+-- fzf-lua
+require("fzf-lua").register_ui_select()
+
+-- telescope (requires nvim-telescope/telescope-ui-select.nvim)
+require("telescope").load_extension("ui-select")
+```
+
+Without either, Neovim's built-in `vim.ui.select` is used.
+
 ## Lualine
 
 The current burrow is set as a global variable `aragog_current_burrow` and can thus be displayed in your lualine.

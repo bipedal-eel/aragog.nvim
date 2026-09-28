@@ -1,5 +1,4 @@
 local utils = require("aragog.utils")
-local telescope = require("aragog.telescope")
 
 ---@alias ui_type "threads" | "burrows" | "workspaces"
 ---@alias select_line_callback fun(type: ui_type, line_index: integer)
@@ -251,7 +250,15 @@ function Ui:toggle_workspace()
 		return
 	end
 
-	telescope.workspace_picker(self.workspaces, function(idx)
+	vim.ui.select(self.workspaces, {
+		prompt = "Workspaces",
+		format_item = function(ws)
+			return ws.name or ws.path
+		end,
+	}, function(_, idx)
+		if not idx then
+			return
+		end
 		self.select_line_callback("workspaces", idx)
 		self.persist_colony()
 	end)
